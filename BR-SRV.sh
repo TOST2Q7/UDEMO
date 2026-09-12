@@ -38,3 +38,33 @@ apt-get update && apt-get install -y ansible sshpass
 cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
+
+# Пропинговка shh для работы ansible
+ssh -p 2027 net_admin@172.16.2.2
+ssh -p 2027 net_admin@172.16.1.2
+ssh -p 2027 sshuser@192.168.100.2
+ssh -p 2027 sshuser@192.168.0.2
+
+# --- Подключение к хосту с динамическим IP (DHCP-пул 192.168.200.2-192.168.200.10) ---
+PORT=2027
+USER=sshuser
+SUBNET=192.168.200
+TIMEOUT=1
+FOUND_IP=""
+
+for i in $(seq 2 10); do
+    IP="${SUBNET}.${i}"
+    if nc -z -w "$TIMEOUT" "$IP" "$PORT" 2>/dev/null; then
+        FOUND_IP="$IP"
+        break
+    fi
+done
+
+if [ -n "$FOUND_IP" ]; then
+    echo "Хост найден: $FOUND_IP"
+    exec ssh -p "$PORT" "${USER}@${FOUND_IP}"
+else
+    echo "Не удалось найти хост в диапазоне ${SUBNET}.2-10 на порту ${PORT}" >&2
+    exit 1
+fi
+

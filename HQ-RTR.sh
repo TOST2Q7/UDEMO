@@ -1,7 +1,6 @@
 #!/bin/bash
 
 hostnamectl set-hostname hq-rtr.au-team.irpo
-exec bash
 
 # Установка gpasswd
 apt-get install shadow-groups
@@ -105,7 +104,7 @@ conf
 router ospf
 network 192.168.100.0/27 area 0
 network 192.168.200.0/28 area 0
-network 192.168.999.0/29 area 0
+network 192.168.99.0/29 area 0
 network 10.10.10.0/30 area 0
 exit
 int tun0
@@ -145,7 +144,7 @@ systemctl restart sshd
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
-echo -e "\033[1;36m=== Следующие действия с \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
+echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
 echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
 echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
@@ -154,6 +153,8 @@ echo -e "TYPE=vlan"
 echo -e "VID=100"
 echo -e "BOOTPROTO=static"
 echo -e "HOST=enp7s1"
-echo -e "\033[1;36m======\033[0m"
+echo -e "\033[1;36m=========================================\033[0m"
 
+exec bash
 
+#Скачять HQ-RTR-v2.sh и сделать
