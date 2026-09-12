@@ -1,6 +1,7 @@
 #!/bin/bash
 apt-get update && apt-get install -y yandex-browser-stable
 
+hostnamectl set-hostname hq-cli.au-team.irpo
 
 # Монтирование RAID 
 mkdir /mnt/nfs

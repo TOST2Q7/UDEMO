@@ -1,5 +1,7 @@
 #!/bin/bash
 
+hostnamectl set-hostname br-rtr.au-team.irpo
+
 # Настройка маршутизации
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 

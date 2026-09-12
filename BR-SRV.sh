@@ -1,6 +1,8 @@
 #!/bin/bash
 echo "Настройка SSH"
 
+hostnamectl set-hostname br-srv.au-team.irpo
+
 # Создание пользователя sshuser с UID 2027 (МЕНЯЙТЕ ИМЯ И Т.Д В ЗАВИСИМОСТИ ОТ ЗАДАНИЯ)
 useradd -u 2027 -m sshuser
 
@@ -39,11 +41,14 @@ cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
 
+
 # Пропинговка shh для работы ansible
-ssh -p 2027 net_admin@172.16.2.2
-ssh -p 2027 net_admin@172.16.1.2
-ssh -p 2027 sshuser@192.168.100.2
-ssh -p 2027 sshuser@192.168.0.2
+apt-get install sshpass -y
+
+sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@172.16.2.2
+sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@172.16.1.2
+sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.100.2
+sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.0.2
 
 # --- Подключение к хосту с динамическим IP (DHCP-пул 192.168.200.2-192.168.200.10) ---
 PORT=2027
@@ -61,10 +66,10 @@ for i in $(seq 2 10); do
 done
 
 if [ -n "$FOUND_IP" ]; then
-    echo "Хост найден: $FOUND_IP"
-    exec ssh -p "$PORT" "${USER}@${FOUND_IP}"
+    echo "Host was found: $FOUND_IP"
+    exec sshpass -p 'P@ssw0rd' ssh -p "$PORT" "${USER}@${FOUND_IP}"
 else
-    echo "Не удалось найти хост в диапазоне ${SUBNET}.2-10 на порту ${PORT}" >&2
+    echo "Net ego ${SUBNET}.2-10 na  porty ${PORT}" >&2
     exit 1
 fi
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+hostnamectl set-hostname hq-srv.au-team.irpo
+
 # Установка wget
 apt-get update && apt-get install wget
 #Настройка ДНС
