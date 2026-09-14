@@ -5,7 +5,7 @@ hostnamectl set-hostname hq-srv.au-team.irpo
 # Установка wget
 apt-get update && apt-get install wget
 #Настройка ДНС
-wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/dnsmasq.conf
+wget raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/dnsmasq.conf
 apt-get install -y dnsmasq
 systemctl enable --now dnsmasq
 rm -rf /etc/dnsmasq.conf
