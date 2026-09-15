@@ -45,8 +45,8 @@ wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.
 # Пропинговка shh для работы ansible
 apt-get install sshpass -y
 
-sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@172.16.2.2
-sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@172.16.1.2
+sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.100.1
+sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.0.2
 sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.100.2
 sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.0.2
 
