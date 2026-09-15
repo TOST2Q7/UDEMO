@@ -1,6 +1,12 @@
 all:
   hosts:
     hq-srv:
-      ansible_host: 192.168.1.10
+      ansible_host: 192.168.100.2
+      ansible_port: 2027
+      ansible_password: P@ssw0rd
+      ansible_user: sshuser
     hq-cli:
-      ansible_host: 192.168.1.20
+      ansible_host: 192.168.200.2
+      ansible_port: 2027
+      ansible_password: P@ssw0rd
+      ansible_user: sshuser
