@@ -1,0 +1,6 @@
+all:
+  hosts:
+    hq-srv:
+      ansible_host: 192.168.1.10
+    hq-cli:
+      ansible_host: 192.168.1.20
