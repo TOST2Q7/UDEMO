@@ -89,13 +89,23 @@ systemctl restart sshd
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
-#Проверка туннеля
-ping 10.10.10.1
+#Проверка туннеля и проверка OSPF
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-#Проверка OSPF
-ping 192.168.100.1
+check() {
+    if ping -c 3 -W 1 "$2" &> /dev/null; then
+        echo -e "${GREEN}$1: OK${NC}"
+    else
+        echo -e "${RED}$1: FAIL${NC}"
+    fi
+}
+
+check "Tunnel" 10.10.10.1
+check "OSPF"   192.168.100.1
 
 
 
-echo "Готово! ."
+echo -e "${RED}br-rtr.sh finish!${NC}"
 

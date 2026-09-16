@@ -89,7 +89,7 @@ echo "Туннель настроен"
 
 
 # Установка FRR (если не установлен)
-apt-get install -y frr
+apt-get install frr -y
 
 # Включение OSPF в /etc/frr/daemons (меняем ospfd=no на ospfd=yes)
 sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
