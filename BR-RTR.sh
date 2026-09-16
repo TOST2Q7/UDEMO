@@ -1,4 +1,12 @@
 #!/bin/bash
+# ===========================================================
+# Переменные
+FILE="./BR-RTR.sh"
+
+
+
+
+# ===========================================================
 
 hostnamectl set-hostname br-rtr.au-team.irpo
 
@@ -105,7 +113,28 @@ check() {
 check "Tunnel" 10.10.10.1
 check "OSPF"   192.168.100.1
 
+# Удаляем скрипт
+if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then
+    echo -e "${GREEN}File deleted: $FILE${NC}"
+else
+    echo -e "${RED}Cannot delete file: $FILE${NC}"
+fi
 
 
 echo -e "${RED}br-rtr.sh finish!${NC}"
 
+
+echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
+
+echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
+echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
+echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
+echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
+echo -e "> vim /ifaces/enp7s1.100/options < "
+echo -e "TYPE=vlan"
+echo -e "VID=100"
+echo -e "BOOTPROTO=static"
+echo -e "HOST=enp7s1"
+echo -e "\033[1;36m=========================================\033[0m"
+
+exec bash

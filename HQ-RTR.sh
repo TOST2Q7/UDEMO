@@ -1,4 +1,14 @@
 #!/bin/bash
+# ===========================================================
+# Переменные
+FILE="./HQ-RTR.sh"
+
+
+
+
+
+
+# ===========================================================
 
 hostnamectl set-hostname hq-rtr.au-team.irpo
 
@@ -142,6 +152,15 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/ss
 # 6. Перезапуск SSH
 systemctl restart sshd
 
+
+# Удаляем скрипт
+if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then
+    echo -e "${GREEN}File deleted: $FILE${NC}"
+else
+    echo -e "${RED}Cannot delete file: $FILE${NC}"
+fi
+
+
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
@@ -156,5 +175,3 @@ echo -e "HOST=enp7s1"
 echo -e "\033[1;36m=========================================\033[0m"
 
 exec bash
-
-#Скачять HQ-RTR-v2.sh и сделать
