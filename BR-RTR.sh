@@ -10,6 +10,9 @@ FILE="./BR-RTR.sh"
 
 hostnamectl set-hostname br-rtr.au-team.irpo
 
+# Установка gpasswd
+apt-get install shadow-groups
+
 # Настройка маршутизации
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 
