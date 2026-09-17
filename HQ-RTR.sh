@@ -13,7 +13,7 @@ FILE="./HQ-RTR.sh"
 hostnamectl set-hostname hq-rtr.au-team.irpo
 
 # Установка gpasswd
-apt-get install shadow-groups
+apt-get install shadow-groups -y
 
 #Создание enp7s2
 mkdir -p /etc/net/ifaces/enp7s2
