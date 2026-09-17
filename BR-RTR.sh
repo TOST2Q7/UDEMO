@@ -1,31 +1,30 @@
 #!/bin/bash
 # ===========================================================
-# Переменные
-FILE="./BR-RTR.sh"
-
-
-
-
+# Variables
+SELF="$(readlink -f "$0")"
+DIR="$(dirname "$SELF")"
+NAME="$(basename "$SELF")"
+LOG="$DIR/${NAME%.sh}-check.log"
+RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/$NAME"
 # ===========================================================
 
 hostnamectl set-hostname br-rtr.au-team.irpo
 
-# Установка gpasswd
+# Install gpasswd
 apt-get install shadow-groups
 
-# Настройка маршутизации
+# Enable routing
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 
-#Создание enp0s8
+# Create enp7s2
 mkdir -p /etc/net/ifaces/enp7s2
 cp -r /etc/net/ifaces/enp7s1/options /etc/net/ifaces/enp7s2/options
 echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
 
-
-# Создаем директорию и файлы конфигурации
+# Create tunnel directory and config files
 mkdir -p /etc/net/ifaces/tun0
 
-# Файл options
+# options file
 cat > /etc/net/ifaces/tun0/options <<EOF
 TYPE=iptun
 TUNTYPE=gre
@@ -36,27 +35,26 @@ TUNOPTIONS='ttl 64'
 HOST=enp7s1
 EOF
 
-# Файл ipv4address
+# ipv4address file
 echo "10.10.10.2/30" > /etc/net/ifaces/tun0/ipv4address
 
-# Загружаем модуль GRE и перезапускаем сеть
+# Load GRE module and restart networking
 modprobe gre
 systemctl restart network
 
-echo "Туннель настроен"
+echo "Tunnel configured"
 
-
-# Установка FRR (если не установлен)
+# Install FRR (if not installed)
 apt-get install -y frr
 
-# Включение OSPF в /etc/frr/daemons (меняем ospfd=no на ospfd=yes)
+# Enable OSPF in /etc/frr/daemons (ospfd=no -> ospfd=yes)
 sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
 
-# Перезагрузка демона и запуск FRR
+# Reload daemon and start FRR
 systemctl daemon-reload
 systemctl enable --now frr
 
-# Настройка OSPF через vtysh (автоматический ввод команд) МЕНЯЙТЕ НА СВОИ АДРЕСА
+# Configure OSPF via vtysh (automatic input) CHANGE TO YOUR OWN ADDRESSES
 vtysh << 'EOF'
 conf
 router ospf
@@ -70,38 +68,38 @@ do wr
 exit
 EOF
 
-echo "Настройка OSPF завершена!"
+echo "OSPF configuration complete!"
 
-#ставим NAT 
+# Set up NAT
 apt-get install iptables -y
-iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE 
+iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 iptables -t nat -A PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 
-# 1. Создание пользователя net_admin (ЛИБО ДРУГОГО ПОЛЬЗОВАТЕЛЯ, ПРИ СМЕНЕ ПОМЕНЯТЬ В ЭТОМ ФАЙЛЕ ИМЯ И Т.Д)
+# 1. Create user net_admin (OR ANOTHER USER, IF CHANGED UPDATE THE NAME ETC IN THIS FILE)
 useradd -m net_admin
 
-# 2. Установка пароля P@$$word (без подтверждения)
+# 2. Set password P@ssw0rd (no confirmation)
 echo "net_admin:P@ssw0rd" | chpasswd
 
-# 3. Добавление в группу wheel
+# 3. Add to group wheel
 gpasswd -a net_admin wheel
 
-# 4. Настройка sudo без пароля
+# 4. Configure passwordless sudo
 echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# 5. Настройка SSH (порт 2027 и запрет root-логина)
+# 5. Configure SSH (port 2027, disable root login)
 sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
-# 6. Перезапуск SSH
+# 6. Restart SSH
 systemctl restart sshd
 
-echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
+echo "Done! User net_admin created, SSH configured on port 2027."
 
 # ===========================================================
-# Итоговая проверка того, что настроил этот скрипт
+# Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -109,49 +107,61 @@ NC='\033[0m'
 
 check() {
     local desc="$1"; shift
+    local result
     if eval "$*" &>/dev/null; then
-        echo -e "${GREEN}[OK]${NC} $desc"
+        result="[OK] $desc"
+        echo -e "${GREEN}${result}${NC}"
     else
-        echo -e "${RED}[FAIL]${NC} $desc"
+        result="[FAIL] $desc"
+        echo -e "${RED}${result}${NC}"
     fi
+    echo "$result" >> "$LOG"
 }
 
-echo "=== Проверка настроек br-rtr ==="
+: > "$LOG"
+echo "=== Checking br-rtr configuration ===" | tee -a "$LOG"
 check "Hostname = br-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "br-rtr.au-team.irpo" ]'
-check "IP forwarding включен"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
-check "Интерфейс enp7s2 поднят"                     'ip addr show enp7s2'
-check "Адрес 192.168.0.1/28 на enp7s2"              'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
-check "Интерфейс tun0 (GRE) поднят"                 'ip addr show tun0'
-check "Адрес 10.10.10.2/30 на tun0"                 'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
-check "FRR запущен"                                 'systemctl is-active --quiet frr'
-check "OSPF демон включен в FRR"                    'grep -q "ospfd=yes" /etc/frr/daemons'
-check "Туннель до ISP отвечает (10.10.10.1)"        'ping -c 3 -W 1 10.10.10.1'
-check "OSPF-маршрут до HQ отвечает (192.168.100.1)" 'ping -c 3 -W 1 192.168.100.1'
-check "NAT MASQUERADE настроен"                     'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
-check "DNAT для SSH (2027) настроен"                'iptables -t nat -C PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
-check "iptables в автозапуске"                      'systemctl is-enabled --quiet iptables'
-check "Пользователь net_admin создан"               'id net_admin'
-check "net_admin состоит в группе wheel"            'id -nG net_admin | grep -qw wheel'
-check "net_admin добавлен в sudoers"                'grep -q "net_admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH порт изменен на 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
-check "Root-логин по SSH запрещен"                  'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "SSH служба активна"                          'systemctl is-active --quiet sshd'
-echo "=== Проверка завершена ==="
+check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "Interface enp7s2 is up"                       'ip addr show enp7s2'
+check "Address 192.168.0.1/28 on enp7s2"            'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
+check "Interface tun0 (GRE) is up"                   'ip addr show tun0'
+check "Address 10.10.10.2/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
+check "FRR is running"                              'systemctl is-active --quiet frr'
+check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
+check "Tunnel to ISP responds (10.10.10.1)"         'ping -c 3 -W 1 10.10.10.1'
+check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
+check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
+check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
+check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
+check "User net_admin exists"                       'id net_admin'
+check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'
+check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "SSH service active"                          'systemctl is-active --quiet sshd'
+echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
-# Удаляем скрипт
-if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then
-    echo -e "${GREEN}File deleted: $FILE${NC}"
-else
-    echo -e "${RED}Cannot delete file: $FILE${NC}"
-fi
+# ===========================================================
+# Create retry/delete helper files, then remove this script
+# ===========================================================
+cat > "$DIR/retry" <<RETRYEOF
+#!/bin/bash
+wget -O "$SELF" "$RAW_URL"
+chmod +x "$SELF"
+exec "$SELF"
+RETRYEOF
+chmod +x "$DIR/retry"
 
+cat > "$DIR/delete" <<DELEOF
+#!/bin/bash
+# Removes everything created by $NAME in this directory
+rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+DELEOF
+chmod +x "$DIR/delete"
 
-echo -e "${RED}br-rtr.sh finish!${NC}"
+rm -f "$SELF"
 
-
-echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
-
-echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
+echo -e "\033[1;36m=== Next steps on HQ-SRV.sh ==="
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
 echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
 echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
@@ -160,6 +170,6 @@ echo -e "TYPE=vlan"
 echo -e "VID=100"
 echo -e "BOOTPROTO=static"
 echo -e "HOST=enp7s1"
-echo -e "\033[1;36m=========================================\033[0m"
+echo -e "=========================================\033[0m"
 
 exec bash

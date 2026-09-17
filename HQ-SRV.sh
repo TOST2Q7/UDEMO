@@ -1,10 +1,18 @@
 #!/bin/bash
+# ===========================================================
+# Variables
+SELF="$(readlink -f "$0")"
+DIR="$(dirname "$SELF")"
+NAME="$(basename "$SELF")"
+LOG="$DIR/${NAME%.sh}-check.log"
+RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/$NAME"
+# ===========================================================
 
 hostnamectl set-hostname hq-srv.au-team.irpo
 
-# Установка wget
+# Install wget
 apt-get update && apt-get install wget
-#Настройка ДНС
+# Configure DNS
 wget raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/dnsmasq.conf
 apt-get install -y dnsmasq
 systemctl enable --now dnsmasq
@@ -13,81 +21,79 @@ cp -r dnsmasq.conf /etc/
 systemctl restart dnsmasq
 ping HQ-SRV.au-team.irpo
 
-echo "Настройка SSH"
+echo "Configuring SSH"
 
-# Создание пользователя sshuser с UID 2027 (МЕНЯЙТЕ ИМЯ И Т.Д В ЗАВИСИМОСТИ ОТ ЗАДАНИЯ)
+# Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
 useradd -u 2027 -m sshuser
 
-# Установка пароля P@ssw0rd без подтверждения
+# Set password P@ssw0rd (no confirmation)
 echo "sshuser:P@ssw0rd" | chpasswd
 
-# Добавление в группу wheel
+# Add to group wheel
 gpasswd -a sshuser wheel
 
-# Настройка sudo без пароля
+# Configure passwordless sudo
 echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# Настройка SSH
+# Configure SSH
 sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 
-# Создание баннера
+# Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Перезапуск SSH
+# Restart SSH
 systemctl restart sshd
 
-echo "Настройка завершена:"
-echo "- Пользователь: sshuser (пароль: P@ssw0rd)"
-echo "- SSH порт: 2027"
-echo "- Root-логин запрещен"
-echo "- Баннер создан"
+echo "Configuration complete:"
+echo "- User: sshuser (password: P@ssw0rd)"
+echo "- SSH port: 2027"
+echo "- Root login disabled"
+echo "- Banner created"
 
-
-echo "Настройка RAID"
-# Создание RAID 0 
+echo "Configuring RAID"
+# Create RAID 0
 mdadm --create --verbose /dev/md0 -l 0 -n 3 /dev/sd[b-d]
 
-# Сохранение конфигурации
+# Save configuration
 mdadm --detail -scan > /etc/mdadm.conf
 
-# Работа с fdisk (автоматический ввод 'n' и 'w')
+# fdisk work (automatic input of 'n' and 'w')
 echo -e "n\n\n\n\n\nw" | fdisk /dev/md0
 
-# Форматирование раздела
+# Format partition
 mkfs.ext4 /dev/md0p1
 
-# Создание директории и монтирование
+# Create directory and mount
 mkdir /raid
 
-# Добавление в fstab
+# Add to fstab
 echo "/dev/md0p1 /raid ext4 defaults 0 0" >> /etc/fstab
 mount -a
 
-# Установка NFS
+# Install NFS
 apt-get install -y nfs-server
 systemctl enable --now nfs
 
-# Настройка NFS
+# Configure NFS
 mkdir /raid/nfs
 chown -R 99:99 /raid/nfs
 chmod 777 /raid/nfs
 
-# Добавление экспорта NFS МЕНЯЙТЕ НА СВОИ СЕТИ
+# Add NFS export CHANGE TO YOUR OWN NETWORKS
 echo "/raid/nfs 192.168.200.0/28(rw,sync,no_subtree_check)" >> /etc/exports
 
-# Перезапуск NFS и создание тестового файла
+# Restart NFS and create a test file
 systemctl restart nfs
 touch /raid/nfs/test
 
-echo "Готово! RAID 5 и NFS настроены."
+echo "Done! RAID and NFS configured."
 
-
-echo "- Настройка RESOLV"
-# Файл /etc/resolv.conf
+echo "- Configuring resolv.conf"
+# /etc/resolv.conf file
 cat > /etc/resolv.conf <<EOF
     nameserver 127.0.0.1
     search au-team.irpo
@@ -96,7 +102,7 @@ EOF
 chattr +i /etc/resolv.conf
 
 # ===========================================================
-# Итоговая проверка того, что настроил этот скрипт
+# Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -104,35 +110,60 @@ NC='\033[0m'
 
 check() {
     local desc="$1"; shift
+    local result
     if eval "$*" &>/dev/null; then
-        echo -e "${GREEN}[OK]${NC} $desc"
+        result="[OK] $desc"
+        echo -e "${GREEN}${result}${NC}"
     else
-        echo -e "${RED}[FAIL]${NC} $desc"
+        result="[FAIL] $desc"
+        echo -e "${RED}${result}${NC}"
     fi
+    echo "$result" >> "$LOG"
 }
 
-echo "=== Проверка настроек hq-srv ==="
-check "Hostname = hq-srv.au-team.irpo"           '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
-check "dnsmasq запущен"                          'systemctl is-active --quiet dnsmasq'
-check "dnsmasq в автозапуске"                    'systemctl is-enabled --quiet dnsmasq'
-check "/etc/dnsmasq.conf скопирован"             '[ -s /etc/dnsmasq.conf ]'
-check "Пользователь sshuser создан (UID 2027)"   '[ "$(id -u sshuser)" = "2027" ]'
-check "sshuser состоит в группе wheel"           'id -nG sshuser | grep -qw wheel'
-check "sshuser добавлен в sudoers"               'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH порт изменен на 2027"                 'grep -q "^Port 2027" /etc/openssh/sshd_config'
-check "Root-логин по SSH запрещен"               'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "AllowUsers sshuser настроен"              'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
-check "MaxAuthTries 2 настроен"                  'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
-check "SSH-баннер создан"                        '[ -f /etc/openssh/banner ]'
-check "SSH служба активна"                       'systemctl is-active --quiet sshd'
-check "RAID-массив /dev/md0 существует"          'grep -q "^md0 :" /proc/mdstat'
-check "/etc/mdadm.conf сохранен"                 '[ -s /etc/mdadm.conf ]'
-check "Раздел /raid смонтирован"                 'mountpoint -q /raid'
-check "/raid добавлен в fstab"                   'grep -q "/dev/md0p1 /raid" /etc/fstab'
-check "NFS-сервер активен"                       'systemctl is-active --quiet nfs'
-check "Каталог /raid/nfs существует"             '[ -d /raid/nfs ]'
-check "Экспорт NFS настроен"                     'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
-check "Тестовый файл NFS создан"                 '[ -f /raid/nfs/test ]'
-check "/etc/resolv.conf содержит nameserver 127.0.0.1" 'grep -q "nameserver 127.0.0.1" /etc/resolv.conf'
-check "/etc/resolv.conf защищен от изменений (immutable)" 'lsattr /etc/resolv.conf | grep -q "i"'
-echo "=== Проверка завершена ==="
+: > "$LOG"
+echo "=== Checking hq-srv configuration ===" | tee -a "$LOG"
+check "Hostname = hq-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
+check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
+check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
+check "/etc/dnsmasq.conf copied"                    '[ -s /etc/dnsmasq.conf ]'
+check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
+check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
+check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
+check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
+check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "RAID array /dev/md0 exists"                  'grep -q "^md0 :" /proc/mdstat'
+check "/etc/mdadm.conf saved"                       '[ -s /etc/mdadm.conf ]'
+check "/raid is mounted"                            'mountpoint -q /raid'
+check "/raid added to fstab"                        'grep -q "/dev/md0p1 /raid" /etc/fstab'
+check "NFS server active"                           'systemctl is-active --quiet nfs'
+check "/raid/nfs directory exists"                  '[ -d /raid/nfs ]'
+check "NFS export configured"                       'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
+check "NFS test file created"                       '[ -f /raid/nfs/test ]'
+check "/etc/resolv.conf contains nameserver 127.0.0.1" 'grep -q "nameserver 127.0.0.1" /etc/resolv.conf'
+check "/etc/resolv.conf is immutable"               'lsattr /etc/resolv.conf | grep -q "i"'
+echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
+
+# ===========================================================
+# Create retry/delete helper files, then remove this script
+# ===========================================================
+cat > "$DIR/retry" <<RETRYEOF
+#!/bin/bash
+wget -O "$SELF" "$RAW_URL"
+chmod +x "$SELF"
+exec "$SELF"
+RETRYEOF
+chmod +x "$DIR/retry"
+
+cat > "$DIR/delete" <<DELEOF
+#!/bin/bash
+# Removes everything created by $NAME in this directory
+rm -f "$LOG" "$DIR/dnsmasq.conf" "$DIR/retry" "$DIR/delete" "$SELF"
+DELEOF
+chmod +x "$DIR/delete"
+
+rm -f "$SELF"

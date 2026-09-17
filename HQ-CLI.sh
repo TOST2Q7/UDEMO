@@ -1,51 +1,60 @@
 #!/bin/bash
+# ===========================================================
+# Variables
+SELF="$(readlink -f "$0")"
+DIR="$(dirname "$SELF")"
+NAME="$(basename "$SELF")"
+LOG="$DIR/${NAME%.sh}-check.log"
+RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/$NAME"
+# ===========================================================
+
 apt-get update && apt-get install -y yandex-browser-stable
 
 hostnamectl set-hostname hq-cli.au-team.irpo
 
-# Монтирование RAID 
+# Mount NFS share
 mkdir /mnt/nfs
 
-# Файл options
+# fstab entry
 cat >> /etc/fstab <<EOF
 192.168.100.2:/raid/nfs /mnt/nfs nfs rw 0 0
 EOF
 mount -a
 ls /mnt/nfs
 
-# Создание пользователя sshuser с UID 2027 (МЕНЯЙТЕ ИМЯ И Т.Д В ЗАВИСИМОСТИ ОТ ЗАДАНИЯ)
+# Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
 useradd -u 2027 -m sshuser
 
-# Установка пароля P@ssw0rd без подтверждения
+# Set password P@ssw0rd (no confirmation)
 echo "sshuser:P@ssw0rd" | chpasswd
 
-# Добавление в группу wheel
+# Add to group wheel
 gpasswd -a sshuser wheel
 
-# Настройка sudo без пароля
+# Configure passwordless sudo
 echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# Настройка SSH
+# Configure SSH
 sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 
-# Создание баннера
+# Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Перезапуск SSH
+# Restart SSH
 systemctl restart sshd
 
-echo "Настройка завершена:"
-echo "- Пользователь: sshuser (пароль: P@ssw0rd)"
-echo "- SSH порт: 2027"
-echo "- Root-логин запрещен"
-echo "- Баннер создан"
+echo "Configuration complete:"
+echo "- User: sshuser (password: P@ssw0rd)"
+echo "- SSH port: 2027"
+echo "- Root login disabled"
+echo "- Banner created"
 
 # ===========================================================
-# Итоговая проверка того, что настроил этот скрипт
+# Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -53,26 +62,50 @@ NC='\033[0m'
 
 check() {
     local desc="$1"; shift
+    local result
     if eval "$*" &>/dev/null; then
-        echo -e "${GREEN}[OK]${NC} $desc"
+        result="[OK] $desc"
+        echo -e "${GREEN}${result}${NC}"
     else
-        echo -e "${RED}[FAIL]${NC} $desc"
+        result="[FAIL] $desc"
+        echo -e "${RED}${result}${NC}"
     fi
+    echo "$result" >> "$LOG"
 }
 
-echo "=== Проверка настроек hq-cli ==="
-check "Hostname = hq-cli.au-team.irpo"           '[ "$(hostnamectl --static)" = "hq-cli.au-team.irpo" ]'
-check "Yandex Browser установлен"                'rpm -q yandex-browser-stable'
-check "/mnt/nfs смонтирован"                     'mountpoint -q /mnt/nfs'
-check "NFS-точка добавлена в fstab"              'grep -q "192.168.100.2:/raid/nfs /mnt/nfs nfs" /etc/fstab'
-check "Пользователь sshuser создан (UID 2027)"   '[ "$(id -u sshuser)" = "2027" ]'
-check "sshuser состоит в группе wheel"           'id -nG sshuser | grep -qw wheel'
-check "sshuser добавлен в sudoers"               'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH порт изменен на 2027"                 'grep -q "^Port 2027" /etc/openssh/sshd_config'
-check "Root-логин по SSH запрещен"               'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "AllowUsers sshuser настроен"              'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
-check "MaxAuthTries 2 настроен"                  'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
-check "SSH-баннер создан"                        '[ -f /etc/openssh/banner ]'
-check "SSH служба активна"                       'systemctl is-active --quiet sshd'
-echo "=== Проверка завершена ==="
+: > "$LOG"
+echo "=== Checking hq-cli configuration ===" | tee -a "$LOG"
+check "Hostname = hq-cli.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-cli.au-team.irpo" ]'
+check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
+check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
+check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid/nfs /mnt/nfs nfs" /etc/fstab'
+check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
+check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
+check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
+check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
+check "SSH service active"                          'systemctl is-active --quiet sshd'
+echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
+# ===========================================================
+# Create retry/delete helper files, then remove this script
+# ===========================================================
+cat > "$DIR/retry" <<RETRYEOF
+#!/bin/bash
+wget -O "$SELF" "$RAW_URL"
+chmod +x "$SELF"
+exec "$SELF"
+RETRYEOF
+chmod +x "$DIR/retry"
+
+cat > "$DIR/delete" <<DELEOF
+#!/bin/bash
+# Removes everything created by $NAME in this directory
+rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+DELEOF
+chmod +x "$DIR/delete"
+
+rm -f "$SELF"
