@@ -58,6 +58,7 @@ echo "- Banner created"
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
 NC='\033[0m'
 
 check() {
@@ -109,3 +110,12 @@ DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
+
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " This is the last host on the HQ client branch."
+echo -e " Nothing else to configure here."
+echo -e "${CYAN}============================================================${NC}"
+echo

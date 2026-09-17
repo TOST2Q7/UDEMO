@@ -151,6 +151,8 @@ systemctl restart sshd
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -217,16 +219,26 @@ rm -f "$SELF"
 
 echo "Done! User net_admin created, SSH configured on port 2027."
 
-echo -e "\033[1;36m=== Next steps on HQ-SRV.sh ==="
-echo -e "> mkdir /etc/net/ifaces/enp7s1.100/"
-echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
-echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
-echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
-echo -e "> vim /ifaces/enp7s1.100/options < "
-echo -e "TYPE=vlan"
-echo -e "VID=100"
-echo -e "BOOTPROTO=static"
-echo -e "HOST=enp7s1"
-echo -e "=========================================\033[0m"
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " Run next : ${YELLOW}HQ-SRV.sh${NC} on the HQ server host"
+echo -e " Segment  : VLAN 100, 192.168.100.0/27"
+echo
+echo -e " Before running it, tag VLAN 100 on that host (enp7s1):"
+echo -e "   mkdir -p /etc/net/ifaces/enp7s1.100"
+echo -e "   cat > /etc/net/ifaces/enp7s1.100/options <<EOF"
+echo -e "   TYPE=vlan"
+echo -e "   VID=100"
+echo -e "   BOOTPROTO=static"
+echo -e "   HOST=enp7s1"
+echo -e "   EOF"
+echo -e "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1.100/ipv4address"
+echo -e "   echo 192.168.100.1 > /etc/net/ifaces/enp7s1.100/ipv4route"
+echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1.100/resolv.conf"
+echo -e "   systemctl restart network"
+echo -e "${CYAN}============================================================${NC}"
+echo
 
 exec bash

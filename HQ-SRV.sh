@@ -106,6 +106,8 @@ chattr +i /etc/resolv.conf
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -167,3 +169,23 @@ DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
+
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " Run next : ${YELLOW}HQ-RTR-2.sh${NC} on the HQ router"
+echo -e " Reason   : switches the DHCP-advertised DNS server from the"
+echo -e "            public resolver (77.88.8.8) to this host"
+echo -e "            (192.168.100.2), now that dnsmasq here is serving"
+echo -e "            the au-team.irpo zone."
+echo
+echo -e " In parallel : ${YELLOW}samba.sh${NC} can now be deployed on the domain"
+echo -e "               controller (VLAN 999, 192.168.99.0/29) - it"
+echo -e "               forwards its own DNS queries to this host."
+echo -e "   echo 192.168.99.2/29 > /etc/net/ifaces/enp7s1/ipv4address"
+echo -e "   echo 192.168.99.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
+echo -e "   systemctl restart network"
+echo -e "${CYAN}============================================================${NC}"
+echo

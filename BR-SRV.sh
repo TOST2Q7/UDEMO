@@ -48,6 +48,7 @@ echo "- Banner created"
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
 NC='\033[0m'
 
 check() {
@@ -85,6 +86,17 @@ check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
+
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " This is the final step in the lab."
+echo -e " Run it only after every other host above is deployed and"
+echo -e " reachable - use /etc/ansible/inventory.yml on this host to"
+echo -e " manage the whole lab with Ansible from here on."
+echo -e "${CYAN}============================================================${NC}"
+echo
 
 # ===========================================================
 # Create retry/delete helper files, then remove this script

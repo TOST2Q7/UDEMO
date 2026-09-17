@@ -17,6 +17,8 @@ echo "Change 77.88.8.8 to 192.168.100.2"
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -58,3 +60,16 @@ DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
+
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " Run next : ${YELLOW}HQ-CLI.sh${NC} on the HQ client"
+echo -e " Segment  : VLAN 200, 192.168.200.0/28 (DHCP)"
+echo
+echo -e " No manual network setup is needed on that host - it gets an"
+echo -e " address, gateway and, as of this change, the correct internal"
+echo -e " DNS server automatically via DHCP from this router."
+echo -e "${CYAN}============================================================${NC}"
+echo

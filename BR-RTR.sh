@@ -103,6 +103,8 @@ echo "Done! User net_admin created, SSH configured on port 2027."
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -161,15 +163,19 @@ chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo -e "\033[1;36m=== Next steps on HQ-SRV.sh ==="
-echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
-echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
-echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
-echo -e "> vim /ifaces/enp7s1.100/options < "
-echo -e "TYPE=vlan"
-echo -e "VID=100"
-echo -e "BOOTPROTO=static"
-echo -e "HOST=enp7s1"
-echo -e "=========================================\033[0m"
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " Run next : ${YELLOW}BR-SRV.sh${NC} on the branch server host"
+echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN)"
+echo
+echo -e " Before running it, set a static address on that host (enp7s1):"
+echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
+echo -e "   echo 192.168.0.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
+echo -e "   systemctl restart network"
+echo -e "${CYAN}============================================================${NC}"
+echo
 
 exec bash

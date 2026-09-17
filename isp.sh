@@ -74,6 +74,8 @@ apt-get update
 # ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -123,5 +125,26 @@ DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
+
+echo
+echo -e "${CYAN}============================================================${NC}"
+echo -e "${CYAN} NEXT STEP${NC}"
+echo -e "${CYAN}============================================================${NC}"
+echo -e " Run next : ${YELLOW}HQ-RTR.sh${NC} (HQ router) and ${YELLOW}BR-RTR.sh${NC} (branch router)"
+echo -e " Segment  : WAN uplinks toward this ISP"
+echo
+echo -e " Before running them, set static WAN addresses on each router (enp7s1):"
+echo
+echo -e "   HQ router (enp7s1):"
+echo -e "     echo 172.16.1.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
+echo -e "     echo 172.16.1.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo
+echo -e "   Branch router (enp7s1):"
+echo -e "     echo 172.16.2.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
+echo -e "     echo 172.16.2.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo
+echo -e "   On both: systemctl restart network"
+echo -e "${CYAN}============================================================${NC}"
+echo
 
 exec bash
