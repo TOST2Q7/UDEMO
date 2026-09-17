@@ -19,7 +19,7 @@ systemctl enable --now dnsmasq
 rm -rf /etc/dnsmasq.conf
 cp -r dnsmasq.conf /etc/
 systemctl restart dnsmasq
-ping HQ-SRV.au-team.irpo
+ping -c 4 HQ-SRV.au-team.irpo
 
 echo "Configuring SSH"
 
