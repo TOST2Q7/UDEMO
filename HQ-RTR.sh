@@ -11,7 +11,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/$NAME"
 hostnamectl set-hostname hq-rtr.au-team.irpo
 
 # Install gpasswd
-apt-get install shadow-groups
+apt-get install shadow-groups -y
 
 # Create enp7s2
 mkdir -p /etc/net/ifaces/enp7s2
@@ -218,6 +218,7 @@ rm -f "$SELF"
 echo "Done! User net_admin created, SSH configured on port 2027."
 
 echo -e "\033[1;36m=== Next steps on HQ-SRV.sh ==="
+echo -e "> mkdir /etc/net/ifaces/enp7s1.100/"
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
 echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
 echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
