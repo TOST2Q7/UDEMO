@@ -34,13 +34,43 @@ echo "- SSH порт: 2027"
 echo "- Root-логин запрещен"
 echo "- Баннер создан"
 
+# ===========================================================
+# Проверка настройки hostname/пользователя/SSH
+# ===========================================================
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+check() {
+    local desc="$1"; shift
+    if eval "$*" &>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} $desc"
+    else
+        echo -e "${RED}[FAIL]${NC} $desc"
+    fi
+}
+
+echo "=== Проверка настроек br-srv ==="
+check "Hostname = br-srv.au-team.irpo"           '[ "$(hostnamectl --static)" = "br-srv.au-team.irpo" ]'
+check "Пользователь sshuser создан (UID 2027)"   '[ "$(id -u sshuser)" = "2027" ]'
+check "sshuser состоит в группе wheel"           'id -nG sshuser | grep -qw wheel'
+check "sshuser добавлен в sudoers"               'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH порт изменен на 2027"                 'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "Root-логин по SSH запрещен"               'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "AllowUsers sshuser настроен"              'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "MaxAuthTries 2 настроен"                  'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
+check "SSH-баннер создан"                        '[ -f /etc/openssh/banner ]'
+check "SSH служба активна"                       'systemctl is-active --quiet sshd'
 
 echo "- Скачиваем файл инвентаря"
-apt-get update && apt-get install -y ansible sshpass 
+apt-get update && apt-get install -y ansible sshpass
 cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
-
+check "ansible установлен"                       'command -v ansible'
+check "sshpass установлен"                       'command -v sshpass'
+check "inventory.yml скачан"                     '[ -s /etc/ansible/inventory.yml ]'
+echo "=== Проверка завершена ==="
 
 # Пропинговка shh для работы ansible
 apt-get install sshpass -y

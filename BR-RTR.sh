@@ -100,21 +100,43 @@ systemctl restart sshd
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
-#Проверка туннеля и проверка OSPF
+# ===========================================================
+# Итоговая проверка того, что настроил этот скрипт
+# ===========================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
 check() {
-    if ping -c 3 -W 1 "$2" &> /dev/null; then
-        echo -e "${GREEN}$1: OK${NC}"
+    local desc="$1"; shift
+    if eval "$*" &>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} $desc"
     else
-        echo -e "${RED}$1: FAIL${NC}"
+        echo -e "${RED}[FAIL]${NC} $desc"
     fi
 }
 
-check "Tunnel" 10.10.10.1
-check "OSPF"   192.168.100.1
+echo "=== Проверка настроек br-rtr ==="
+check "Hostname = br-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "br-rtr.au-team.irpo" ]'
+check "IP forwarding включен"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "Интерфейс enp7s2 поднят"                     'ip addr show enp7s2'
+check "Адрес 192.168.0.1/28 на enp7s2"              'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
+check "Интерфейс tun0 (GRE) поднят"                 'ip addr show tun0'
+check "Адрес 10.10.10.2/30 на tun0"                 'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
+check "FRR запущен"                                 'systemctl is-active --quiet frr'
+check "OSPF демон включен в FRR"                    'grep -q "ospfd=yes" /etc/frr/daemons'
+check "Туннель до ISP отвечает (10.10.10.1)"        'ping -c 3 -W 1 10.10.10.1'
+check "OSPF-маршрут до HQ отвечает (192.168.100.1)" 'ping -c 3 -W 1 192.168.100.1'
+check "NAT MASQUERADE настроен"                     'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
+check "DNAT для SSH (2027) настроен"                'iptables -t nat -C PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
+check "iptables в автозапуске"                      'systemctl is-enabled --quiet iptables'
+check "Пользователь net_admin создан"               'id net_admin'
+check "net_admin состоит в группе wheel"            'id -nG net_admin | grep -qw wheel'
+check "net_admin добавлен в sudoers"                'grep -q "net_admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH порт изменен на 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "Root-логин по SSH запрещен"                  'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "SSH служба активна"                          'systemctl is-active --quiet sshd'
+echo "=== Проверка завершена ==="
 
 # Удаляем скрипт
 if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then

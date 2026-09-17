@@ -94,3 +94,45 @@ cat > /etc/resolv.conf <<EOF
 
 EOF
 chattr +i /etc/resolv.conf
+
+# ===========================================================
+# Итоговая проверка того, что настроил этот скрипт
+# ===========================================================
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+check() {
+    local desc="$1"; shift
+    if eval "$*" &>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} $desc"
+    else
+        echo -e "${RED}[FAIL]${NC} $desc"
+    fi
+}
+
+echo "=== Проверка настроек hq-srv ==="
+check "Hostname = hq-srv.au-team.irpo"           '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
+check "dnsmasq запущен"                          'systemctl is-active --quiet dnsmasq'
+check "dnsmasq в автозапуске"                    'systemctl is-enabled --quiet dnsmasq'
+check "/etc/dnsmasq.conf скопирован"             '[ -s /etc/dnsmasq.conf ]'
+check "Пользователь sshuser создан (UID 2027)"   '[ "$(id -u sshuser)" = "2027" ]'
+check "sshuser состоит в группе wheel"           'id -nG sshuser | grep -qw wheel'
+check "sshuser добавлен в sudoers"               'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH порт изменен на 2027"                 'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "Root-логин по SSH запрещен"               'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "AllowUsers sshuser настроен"              'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "MaxAuthTries 2 настроен"                  'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
+check "SSH-баннер создан"                        '[ -f /etc/openssh/banner ]'
+check "SSH служба активна"                       'systemctl is-active --quiet sshd'
+check "RAID-массив /dev/md0 существует"          'grep -q "^md0 :" /proc/mdstat'
+check "/etc/mdadm.conf сохранен"                 '[ -s /etc/mdadm.conf ]'
+check "Раздел /raid смонтирован"                 'mountpoint -q /raid'
+check "/raid добавлен в fstab"                   'grep -q "/dev/md0p1 /raid" /etc/fstab'
+check "NFS-сервер активен"                       'systemctl is-active --quiet nfs'
+check "Каталог /raid/nfs существует"             '[ -d /raid/nfs ]'
+check "Экспорт NFS настроен"                     'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
+check "Тестовый файл NFS создан"                 '[ -f /raid/nfs/test ]'
+check "/etc/resolv.conf содержит nameserver 127.0.0.1" 'grep -q "nameserver 127.0.0.1" /etc/resolv.conf'
+check "/etc/resolv.conf защищен от изменений (immutable)" 'lsattr /etc/resolv.conf | grep -q "i"'
+echo "=== Проверка завершена ==="

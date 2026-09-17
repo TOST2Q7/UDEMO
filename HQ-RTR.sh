@@ -152,6 +152,49 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/ss
 # 6. Перезапуск SSH
 systemctl restart sshd
 
+# ===========================================================
+# Итоговая проверка того, что настроил этот скрипт
+# ===========================================================
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+check() {
+    local desc="$1"; shift
+    if eval "$*" &>/dev/null; then
+        echo -e "${GREEN}[OK]${NC} $desc"
+    else
+        echo -e "${RED}[FAIL]${NC} $desc"
+    fi
+}
+
+echo "=== Проверка настроек hq-rtr ==="
+check "Hostname = hq-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-rtr.au-team.irpo" ]'
+check "IP forwarding включен"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "VLAN100 (enp7s2.100) поднят"                 'ip addr show enp7s2.100'
+check "Адрес 192.168.100.1/27 на enp7s2.100"        'ip -4 addr show enp7s2.100 | grep -q "192.168.100.1/27"'
+check "VLAN200 (enp7s2.200) поднят"                 'ip addr show enp7s2.200'
+check "Адрес 192.168.200.1/28 на enp7s2.200"        'ip -4 addr show enp7s2.200 | grep -q "192.168.200.1/28"'
+check "VLAN999 (enp7s2.999) поднят"                 'ip addr show enp7s2.999'
+check "Адрес 192.168.99.1/29 на enp7s2.999"         'ip -4 addr show enp7s2.999 | grep -q "192.168.99.1/29"'
+check "dnsmasq запущен"                             'systemctl is-active --quiet dnsmasq'
+check "dnsmasq в автозапуске"                       'systemctl is-enabled --quiet dnsmasq'
+check "dnsmasq слушает VLAN200"                     'grep -q "^interface=enp7s2.200$" /etc/dnsmasq.conf'
+check "Интерфейс tun0 (GRE) поднят"                 'ip addr show tun0'
+check "Адрес 10.10.10.1/30 на tun0"                 'ip -4 addr show tun0 | grep -q "10.10.10.1/30"'
+check "FRR запущен"                                 'systemctl is-active --quiet frr'
+check "OSPF демон включен в FRR"                    'grep -q "ospfd=yes" /etc/frr/daemons'
+check "Туннель до филиала отвечает (10.10.10.2)"    'ping -c 3 -W 1 10.10.10.2'
+check "Сервер HQ-SRV доступен (192.168.100.2)"      'ping -c 3 -W 1 192.168.100.2'
+check "NAT MASQUERADE настроен"                     'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
+check "iptables в автозапуске"                      'systemctl is-enabled --quiet iptables'
+check "Пользователь net_admin создан"               'id net_admin'
+check "net_admin состоит в группе wheel"            'id -nG net_admin | grep -qw wheel'
+check "net_admin добавлен в sudoers"                'grep -q "net_admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH порт изменен на 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "Root-логин по SSH запрещен"                  'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
+check "SSH служба активна"                          'systemctl is-active --quiet sshd'
+echo "=== Проверка завершена ==="
 
 # Удаляем скрипт
 if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then

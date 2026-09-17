@@ -17,3 +17,17 @@
           Hostname: {{ ansible_hostname }}
           IP_Address: {{ ansible_default_ipv4.address }}
       delegate_to: localhost
+
+    - name: Verify that the info file was written
+      stat:
+        path: /etc/ansible/PC-INFO/{{ ansible_hostname }}.yml
+      register: info_file
+      delegate_to: localhost
+
+    - name: Fail if the info file is missing
+      assert:
+        that:
+          - info_file.stat.exists
+        fail_msg: "Файл /etc/ansible/PC-INFO/{{ ansible_hostname }}.yml не был создан"
+        success_msg: "Файл /etc/ansible/PC-INFO/{{ ansible_hostname }}.yml создан корректно"
+      delegate_to: localhost
