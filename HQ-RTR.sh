@@ -207,6 +207,7 @@ fi
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
+echo -e "> mkdir /etc/net/ifaces/enp7s1.100/"
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
 echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
 echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
