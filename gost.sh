@@ -62,14 +62,19 @@ openssl req -new -md_gost12_256 -key "$DOCKER_FQDN.key" \
     -addext "subjectAltName=DNS:$DOCKER_FQDN" \
     -out "$DOCKER_FQDN.csr"
 
-# 4. Sign both CSRs with our CA, carrying the SAN extension over
-#    (x509 -req does not copy CSR extensions unless told to)
+# 4. Sign both CSRs with our CA, carrying the SAN extension over.
+#    x509 -req never copies CSR extensions on its own; -copy_extensions
+#    only exists on OpenSSL 3.0+, so an extfile is used instead - it
+#    works the same way on both 1.1.1 and 3.x.
+printf 'subjectAltName=DNS:%s\n' "$WEB_FQDN" > "$WEB_FQDN.extfile"
+printf 'subjectAltName=DNS:%s\n' "$DOCKER_FQDN" > "$DOCKER_FQDN.extfile"
+
 openssl x509 -req -in "$WEB_FQDN.csr" -CA "$CA_CER" -CAkey "$CA_KEY" -CAcreateserial \
-    -md_gost12_256 -days "$DAYS" -copy_extensions copyall \
+    -md_gost12_256 -days "$DAYS" -extfile "$WEB_FQDN.extfile" \
     -out "$WEB_FQDN.cer"
 
 openssl x509 -req -in "$DOCKER_FQDN.csr" -CA "$CA_CER" -CAkey "$CA_KEY" -CAcreateserial \
-    -md_gost12_256 -days "$DAYS" -copy_extensions copyall \
+    -md_gost12_256 -days "$DAYS" -extfile "$DOCKER_FQDN.extfile" \
     -out "$DOCKER_FQDN.cer"
 
 echo "Certificates generated in $CA_DIR"
@@ -116,6 +121,13 @@ echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 # ===========================================================
 # Deliver the certificates
 # ===========================================================
+for f in "$WEB_FQDN.key" "$WEB_FQDN.cer" "$DOCKER_FQDN.key" "$DOCKER_FQDN.cer" "$(basename "$CA_CER")"; do
+    if [ ! -s "$CA_DIR/$f" ]; then
+        echo "Certificate generation failed, $CA_DIR/$f is missing - not copying anything to ISP/HQ-CLI. See the check output above." >&2
+        exit 1
+    fi
+done
+
 echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST) - you will be asked for the root password:"
 scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/"
 
