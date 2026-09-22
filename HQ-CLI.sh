@@ -92,6 +92,14 @@ check "SSH service active"                          'systemctl is-active --quiet
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
+# Pre-fetch gost-hqcli.sh (used much later, once gost.sh on HQ-SRV
+# has delivered the CA certificate here) so it is already on disk
+# when needed - do not run it yet, ca.cer does not exist until then
+# ===========================================================
+wget -O "$DIR/gost-hqcli.sh" "$(dirname "$RAW_URL")/gost-hqcli.sh" && chmod +x "$DIR/gost-hqcli.sh" \
+    || echo "Could not pre-fetch gost-hqcli.sh, fetch it manually later" >&2
+
+# ===========================================================
 # Create retry/delete helper files, then remove this script
 # ===========================================================
 cat > "$DIR/retry" <<RETRYEOF
@@ -105,7 +113,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$DIR/gost-hqcli.sh" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
@@ -116,6 +124,9 @@ echo -e "${CYAN}============================================================${NC
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " This is the last host on the HQ client branch."
-echo -e " Nothing else to configure here."
+echo -e " Nothing else to configure here for now."
+echo -e " (gost-hqcli.sh was pre-fetched into this directory - run it much"
+echo -e "  later, once gost.sh on HQ-SRV has delivered the CA certificate"
+echo -e "  here)"
 echo -e "${CYAN}============================================================${NC}"
 echo

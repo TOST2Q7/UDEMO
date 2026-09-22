@@ -107,6 +107,14 @@ check "SSH service active"                          'systemctl is-active --quiet
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
+# Pre-fetch gost-isp.sh (used much later, once gost.sh on HQ-SRV
+# has delivered certificates here) so it is already on disk when
+# needed - do not run it yet, the certs do not exist until then
+# ===========================================================
+wget -O "$DIR/gost-isp.sh" "$(dirname "$RAW_URL")/gost-isp.sh" && chmod +x "$DIR/gost-isp.sh" \
+    || echo "Could not pre-fetch gost-isp.sh, fetch it manually later" >&2
+
+# ===========================================================
 # Create retry/delete helper files, then remove this script
 # ===========================================================
 cat > "$DIR/retry" <<RETRYEOF
@@ -120,7 +128,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$DIR/gost-isp.sh" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
@@ -132,6 +140,8 @@ echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Run next : ${YELLOW}HQ-RTR.sh${NC} (HQ router) and ${YELLOW}BR-RTR.sh${NC} (branch router)"
 echo -e " Segment  : WAN uplinks toward this ISP"
+echo -e " (gost-isp.sh was pre-fetched into this directory - run it much"
+echo -e "  later, once gost.sh on HQ-SRV has delivered certificates here)"
 echo
 echo -e " Before running them, set static WAN addresses on each router (enp7s1):"
 echo
