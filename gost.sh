@@ -23,6 +23,8 @@ ISP_HOST="172.16.1.1"
 HQCLI_USER="sshuser"
 HQCLI_HOST="192.168.200.2"
 HQCLI_PORT=2027
+
+SSH_PASSWORD="P@ssw0rd"
 # ===========================================================
 
 mkdir -p "$CA_DIR"
@@ -128,10 +130,14 @@ for f in "$WEB_FQDN.key" "$WEB_FQDN.cer" "$DOCKER_FQDN.key" "$DOCKER_FQDN.cer" "
     fi
 done
 
-echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST) - you will be asked for the root password:"
+echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST):"
+echo -e "${YELLOW}Username: $ISP_USER${NC}"
+echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
 scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/"
 
-echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST) - you will be asked for the sshuser password:"
+echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST):"
+echo -e "${YELLOW}Username: $HQCLI_USER${NC}"
+echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
 scp -P "$HQCLI_PORT" "$CA_CER" "$HQCLI_USER@$HQCLI_HOST:~/"
 
 # ===========================================================
