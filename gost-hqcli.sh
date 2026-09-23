@@ -11,6 +11,8 @@ WEB_FQDN="web.au-team.irpo"
 DOCKER_FQDN="docker.au-team.irpo"
 HQCLI_USER="sshuser"
 ANCHOR="/etc/pki/ca-trust/source/anchors/ca.cer"
+# nginx reverse proxy on ISP, reachable from here through HQ-RTR
+PROXY_IP="172.16.1.1"
 # ===========================================================
 
 # gost.sh (on HQ-SRV) copies ca.cer into sshuser's home over scp, but
@@ -33,6 +35,13 @@ echo "Using $CA_CER"
 
 sudo cp "$CA_CER" "$ANCHOR"
 sudo update-ca-trust
+
+# The DNS on HQ-SRV has no records for the proxied sites, so point them
+# at the proxy here; old lines for these names are replaced, not duplicated
+for fqdn in "$WEB_FQDN" "$DOCKER_FQDN"; do
+    sudo sed -i "/[[:space:]]${fqdn//./\\.}\([[:space:]]\|\$\)/d" /etc/hosts
+    echo "$PROXY_IP $fqdn" | sudo tee -a /etc/hosts >/dev/null
+done
 
 # ===========================================================
 # Final check of everything this script configured
@@ -60,6 +69,8 @@ echo "=== Checking gost-hqcli configuration ===" | tee -a "$LOG"
 check "CA certificate installed as trust anchor"  "[ -s \"$ANCHOR\" ]"
 check "Anchor matches the delivered CA cert"      "cmp -s \"$CA_CER\" \"$ANCHOR\""
 check "update-ca-trust is available"              'command -v update-ca-trust'
+check "$WEB_FQDN resolves to $PROXY_IP"           "getent hosts $WEB_FQDN | grep -q \"^$PROXY_IP \""
+check "$DOCKER_FQDN resolves to $PROXY_IP"        "getent hosts $DOCKER_FQDN | grep -q \"^$PROXY_IP \""
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
