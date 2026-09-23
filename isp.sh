@@ -78,16 +78,6 @@ wget -O "$DIR/gost-isp.sh" "$(dirname "$RAW_URL")/gost-isp.sh" && chmod +x "$DIR
     || echo "Could not pre-fetch gost-isp.sh, fetch it manually later" >&2
 
 # ===========================================================
-# Point DNS at HQ-SRV - done last, everything above still needs
-# the public resolver
-# ===========================================================
-cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
-nameserver 192.168.100.2
-search au-team.irpo
-EOF
-cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
-
-# ===========================================================
 # Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
@@ -122,7 +112,6 @@ check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUT
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "SSH root login allowed"                      'grep -q "^PermitRootLogin yes" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
