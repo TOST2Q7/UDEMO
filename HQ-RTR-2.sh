@@ -12,6 +12,9 @@ sed -i 's/^dhcp-option=6,77\.88\.8\.8$/dhcp-option=6,192.168.100.2/' /etc/dnsmas
 
 echo "Change 77.88.8.8 to 192.168.100.2"
 
+# dnsmasq only reads its config at start
+systemctl restart dnsmasq
+
 # ===========================================================
 # Point DNS at HQ-SRV - done last, everything above still needs
 # the public resolver
@@ -82,5 +85,7 @@ echo
 echo -e " No manual network setup is needed on that host - it gets an"
 echo -e " address, gateway and, as of this change, the correct internal"
 echo -e " DNS server automatically via DHCP from this router."
+echo -e " If HQ-CLI already holds a lease, renew it there first:"
+echo -e "   systemctl restart network"
 echo -e "${CYAN}============================================================${NC}"
 echo

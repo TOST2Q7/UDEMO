@@ -13,13 +13,12 @@ hostnamectl set-hostname hq-srv.au-team.irpo
 # Install wget
 apt-get update && apt-get install wget
 # Configure DNS
-wget raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/dnsmasq.conf
+wget -O "$DIR/dnsmasq.conf" "$(dirname "$RAW_URL")/dnsmasq.conf"
 apt-get install -y dnsmasq
 systemctl enable --now dnsmasq
 rm -rf /etc/dnsmasq.conf
-cp -r dnsmasq.conf /etc/
+cp "$DIR/dnsmasq.conf" /etc/
 systemctl restart dnsmasq
-ping -c 4 HQ-SRV.au-team.irpo
 
 echo "Configuring SSH"
 
@@ -154,6 +153,8 @@ check "NFS export configured"                       'grep -q "^/raid/nfs 192.168
 check "NFS test file created"                       '[ -f /raid/nfs/test ]'
 check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 check "/etc/resolv.conf uses 127.0.0.1"             'grep -qx "nameserver 127.0.0.1" /etc/resolv.conf'
+check "Local DNS answers hq-srv.au-team.irpo"       'getent hosts hq-srv.au-team.irpo | grep -q "^192.168.100.2 "'
+check "Local DNS answers moodle/wiki (CNAME)"       'getent hosts moodle.au-team.irpo && getent hosts wiki.au-team.irpo'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
@@ -186,12 +187,9 @@ echo -e "            public resolver (77.88.8.8) to this host"
 echo -e "            (192.168.100.2), now that dnsmasq here is serving"
 echo -e "            the au-team.irpo zone."
 echo
-echo -e " In parallel : ${YELLOW}samba.sh${NC} can now be deployed on the domain"
-echo -e "               controller (VLAN 999, 192.168.99.0/29) - it"
-echo -e "               forwards its own DNS queries to this host."
-echo -e "   echo 192.168.99.2/29 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "   echo 192.168.99.1 > /etc/net/ifaces/enp7s1/ipv4route"
-echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
-echo -e "   systemctl restart network"
+echo -e " Later     : ${YELLOW}samba.sh${NC} goes on BR-SRV (the domain controller),"
+echo -e "             after BR-SRV.sh. This host already forwards au-team.irpo"
+echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
+echo -e "             and the DC forwards everything else back here."
 echo -e "${CYAN}============================================================${NC}"
 echo

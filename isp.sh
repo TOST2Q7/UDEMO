@@ -147,11 +147,13 @@ echo -e " Before running them, set static WAN addresses on each router (enp7s1):
 echo
 echo -e "   HQ router (enp7s1):"
 echo -e "     echo 172.16.1.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "     echo 172.16.1.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "     echo 'default via 172.16.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "     echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
 echo
 echo -e "   Branch router (enp7s1):"
 echo -e "     echo 172.16.2.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "     echo 172.16.2.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "     echo 'default via 172.16.2.1' > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "     echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
 echo
 echo -e "   On both: systemctl restart network"
 echo -e "${CYAN}============================================================${NC}"

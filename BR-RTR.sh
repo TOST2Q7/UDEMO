@@ -73,7 +73,9 @@ echo "OSPF configuration complete!"
 # Set up NAT
 apt-get install iptables -y
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
-iptables -t nat -A PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
+# Forward port 2027 arriving from outside (WAN) to BR-SRV; matching the LAN
+# address instead would hijack SSH to this router itself
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 
@@ -143,7 +145,7 @@ check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/fr
 check "Tunnel to ISP responds (10.10.10.1)"         'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
-check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
+check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "User net_admin exists"                       'id net_admin'
 check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'
@@ -183,7 +185,7 @@ echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN)"
 echo
 echo -e " Before running it, set a static address on that host (enp7s1):"
 echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "   echo 192.168.0.1 > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "   echo 'default via 192.168.0.1' > /etc/net/ifaces/enp7s1/ipv4route"
 echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
 echo -e "   systemctl restart network"
 echo -e "${CYAN}============================================================${NC}"

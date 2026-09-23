@@ -49,6 +49,7 @@ echo "- Banner created"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -79,6 +80,7 @@ check "SSH service active"                          'systemctl is-active --quiet
 
 echo "- Downloading inventory file"
 apt-get update && apt-get install -y ansible sshpass
+mkdir -p /etc/ansible
 cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
@@ -102,10 +104,9 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " This is the final step in the lab."
-echo -e " Run it only after every other host above is deployed and"
-echo -e " reachable - use /etc/ansible/inventory.yml on this host to"
-echo -e " manage the whole lab with Ansible from here on."
+echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for au-team.irpo."
+echo -e " After that every host is deployed; use /etc/ansible/inventory.yml"
+echo -e " here to manage the lab with Ansible."
 echo -e "${CYAN}============================================================${NC}"
 echo
 
@@ -133,7 +134,7 @@ rm -f "$SELF"
 apt-get install sshpass -y
 
 sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.100.1
-sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.0.2
+sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.0.1
 sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.100.2
 sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.0.2
 
@@ -154,6 +155,8 @@ done
 
 if [ -n "$FOUND_IP" ]; then
     echo "Host was found: $FOUND_IP"
+    # inventory.yml ships a fixed HQ-CLI address, but HQ-CLI gets a random one from DHCP
+    sed -i "/^ *hq-cli:/,/ansible_host:/ s/ansible_host: .*/ansible_host: $FOUND_IP/" /etc/ansible/inventory.yml
     exec sshpass -p 'P@ssw0rd' ssh -p "$PORT" "${USER}@${FOUND_IP}"
 else
     echo "No host found on ${SUBNET}.2-10 port ${PORT}" >&2
