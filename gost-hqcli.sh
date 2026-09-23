@@ -33,14 +33,14 @@ if [ -z "$CA_CER" ]; then
 fi
 echo "Using $CA_CER"
 
-sudo cp "$CA_CER" "$ANCHOR"
-sudo update-ca-trust
+cp "$CA_CER" "$ANCHOR"
+update-ca-trust
 
 # The DNS on HQ-SRV has no records for the proxied sites, so point them
 # at the proxy here; old lines for these names are replaced, not duplicated
 for fqdn in "$WEB_FQDN" "$DOCKER_FQDN"; do
-    sudo sed -i "/[[:space:]]${fqdn//./\\.}\([[:space:]]\|\$\)/d" /etc/hosts
-    echo "$PROXY_IP $fqdn" | sudo tee -a /etc/hosts >/dev/null
+    sed -i "/[[:space:]]${fqdn//./\\.}\([[:space:]]\|\$\)/d" /etc/hosts
+    echo "$PROXY_IP $fqdn" >> /etc/hosts
 done
 
 # ===========================================================
