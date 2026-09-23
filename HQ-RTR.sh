@@ -147,6 +147,16 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/ss
 systemctl restart sshd
 
 # ===========================================================
+# Point DNS at HQ-SRV - done last, everything above still needs
+# the public resolver
+# ===========================================================
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+# ===========================================================
 # Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
@@ -195,6 +205,7 @@ check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL
 check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

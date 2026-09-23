@@ -82,6 +82,19 @@ openssl x509 -req -in "$DOCKER_FQDN.csr" -CA "$CA_CER" -CAkey "$CA_KEY" -CAcreat
 echo "Certificates generated in $CA_DIR"
 
 # ===========================================================
+# Point DNS at HQ-SRV - done last, everything above still needs
+# the public resolver
+# ===========================================================
+# Earlier versions of HQ-SRV.sh made it immutable
+chattr -i /etc/resolv.conf 2>/dev/null
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 127.0.0.1
+search au-team.irpo
+EOF
+[ -d /etc/net/ifaces/enp7s1.100 ] && cp /etc/net/ifaces/enp7s1/resolv.conf /etc/net/ifaces/enp7s1.100/resolv.conf
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+# ===========================================================
 # Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
@@ -118,6 +131,7 @@ check "$DOCKER_FQDN key exists"                      "[ -s \"$CA_DIR/$DOCKER_FQD
 check "$DOCKER_FQDN certificate exists"              "[ -s \"$CA_DIR/$DOCKER_FQDN.cer\" ]"
 check "$DOCKER_FQDN certificate signed by our CA"    "openssl verify -CAfile \"$CA_CER\" \"$CA_DIR/$DOCKER_FQDN.cer\""
 check "$DOCKER_FQDN certificate has correct SAN"     "openssl x509 -in \"$CA_DIR/$DOCKER_FQDN.cer\" -noout -text | grep -q \"DNS:$DOCKER_FQDN\""
+check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

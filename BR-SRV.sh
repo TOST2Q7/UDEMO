@@ -82,6 +82,17 @@ apt-get update && apt-get install -y ansible sshpass
 cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
+# ===========================================================
+# Point DNS at HQ-SRV - done after the last download, which still
+# needs the public resolver
+# ===========================================================
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'

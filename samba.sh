@@ -65,6 +65,16 @@ EOF
 systemctl restart chronyd
 
 # ===========================================================
+# Point DNS at HQ-SRV - done last, everything above still needs
+# the public resolver
+# ===========================================================
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+# ===========================================================
 # Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
@@ -91,13 +101,13 @@ check "Samba service active"                        'systemctl is-active --quiet
 check "Samba service enabled at boot"               'systemctl is-enabled --quiet samba'
 check "Domain AU-TEAM.IRPO created"                 'samba-tool domain info 127.0.0.1'
 check "/etc/krb5.conf copied"                       '[ -s /etc/krb5.conf ]'
-check "resolv.conf on enp7s1 configured (search au-team.irpo)" 'grep -q "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 check "Group hq created"                            'samba-tool group list | grep -qw hq'
 for i in 1 2 3 4 5; do
     check "User hquser$i created"                   "samba-tool user list | grep -qw hquser$i"
 done
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chrony.conf points to 172.16.2.1"            'grep -q "^server 172.16.2.1 iburst" /etc/chrony.conf'
+check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

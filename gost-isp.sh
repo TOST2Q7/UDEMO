@@ -72,6 +72,16 @@ NGINXEOF
 nginx -t && systemctl restart nginx
 
 # ===========================================================
+# Point DNS at HQ-SRV - done last, everything above still needs
+# the public resolver
+# ===========================================================
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+# ===========================================================
 # Final check of everything this script configured
 # ===========================================================
 GREEN='\033[0;32m'
@@ -101,6 +111,7 @@ check "vhost points at the right $WEB_FQDN files"    "grep -q \"$SSL_DIR/$WEB_FQ
 check "vhost points at the right $DOCKER_FQDN files" "grep -q \"$SSL_DIR/$DOCKER_FQDN.key\" \"$VHOST\" && grep -q \"$SSL_DIR/$DOCKER_FQDN.cer\" \"$VHOST\""
 check "nginx config test passes"               'nginx -t'
 check "nginx service active"                   'systemctl is-active --quiet nginx'
+check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

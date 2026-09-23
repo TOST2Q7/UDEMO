@@ -92,14 +92,20 @@ touch /raid/nfs/test
 
 echo "Done! RAID and NFS configured."
 
+# ===========================================================
+# Point DNS at this host's own dnsmasq - done last, everything above
+# still needs the public resolver
+# ===========================================================
 echo "- Configuring resolv.conf"
-# /etc/resolv.conf file
-cat > /etc/resolv.conf <<EOF
-    nameserver 127.0.0.1
-    search au-team.irpo
-
+# Earlier versions of this script made it immutable
+chattr -i /etc/resolv.conf 2>/dev/null
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 127.0.0.1
+search au-team.irpo
 EOF
-chattr +i /etc/resolv.conf
+# The VLAN 100 sub-interface still holds the temporary 77.88.8.8 from setup
+[ -d /etc/net/ifaces/enp7s1.100 ] && cp /etc/net/ifaces/enp7s1/resolv.conf /etc/net/ifaces/enp7s1.100/resolv.conf
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
 # ===========================================================
 # Final check of everything this script configured
@@ -146,8 +152,8 @@ check "NFS server active"                           'systemctl is-active --quiet
 check "/raid/nfs directory exists"                  '[ -d /raid/nfs ]'
 check "NFS export configured"                       'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
 check "NFS test file created"                       '[ -f /raid/nfs/test ]'
-check "/etc/resolv.conf contains nameserver 127.0.0.1" 'grep -q "nameserver 127.0.0.1" /etc/resolv.conf'
-check "/etc/resolv.conf is immutable"               'lsattr /etc/resolv.conf | grep -q "i"'
+check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "/etc/resolv.conf uses 127.0.0.1"             'grep -qx "nameserver 127.0.0.1" /etc/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
