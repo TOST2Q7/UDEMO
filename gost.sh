@@ -21,8 +21,12 @@ ISP_USER="root"
 ISP_HOST="172.16.1.1"
 
 HQCLI_USER="sshuser"
-HQCLI_HOST="192.168.200.2"
 HQCLI_PORT=2027
+# HQ-CLI gets a random address from HQ-RTR's DHCP pool, so it is
+# found by scanning the pool; run "HQCLI_HOST=x.x.x.x ./gost.sh" to skip it
+HQCLI_SUBNET="192.168.200"
+HQCLI_POOL="$(seq 2 10)"
+HQCLI_HOST="${HQCLI_HOST:-}"
 
 SSH_PASSWORD="P@ssw0rd"
 # ===========================================================
@@ -144,15 +148,36 @@ for f in "$WEB_FQDN.key" "$WEB_FQDN.cer" "$DOCKER_FQDN.key" "$DOCKER_FQDN.cer" "
     fi
 done
 
+ISP_OK=0
+HQCLI_OK=0
+
 echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST):"
 echo -e "${YELLOW}Username: $ISP_USER${NC}"
 echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
-scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/"
+scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/" \
+    && ISP_OK=1
 
-echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST):"
-echo -e "${YELLOW}Username: $HQCLI_USER${NC}"
-echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
-scp -P "$HQCLI_PORT" "$CA_CER" "$HQCLI_USER@$HQCLI_HOST:~/"
+if [ -z "$HQCLI_HOST" ]; then
+    echo "Looking for HQ-CLI in $HQCLI_SUBNET.2-10 (SSH port $HQCLI_PORT)..."
+    for i in $HQCLI_POOL; do
+        if timeout 1 bash -c "</dev/tcp/$HQCLI_SUBNET.$i/$HQCLI_PORT" 2>/dev/null; then
+            HQCLI_HOST="$HQCLI_SUBNET.$i"
+            break
+        fi
+    done
+fi
+
+if [ -n "$HQCLI_HOST" ]; then
+    echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST):"
+    echo -e "${YELLOW}Username: $HQCLI_USER${NC}"
+    echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
+    scp -P "$HQCLI_PORT" "$CA_CER" "$HQCLI_USER@$HQCLI_HOST:~/" && HQCLI_OK=1
+else
+    echo -e "${RED}HQ-CLI not found: nothing answers on port $HQCLI_PORT in $HQCLI_SUBNET.2-10${NC}" >&2
+fi
+
+check "Key/cert pairs delivered to ISP ($ISP_HOST)"                  "[ $ISP_OK = 1 ]"
+check "CA certificate delivered to HQ-CLI (${HQCLI_HOST:-not found})" "[ $HQCLI_OK = 1 ]"
 
 # ===========================================================
 # Create retry/delete helper files, then remove this script
@@ -178,17 +203,28 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}gost-isp.sh${NC} on ISP, then ${YELLOW}gost-hqcli.sh${NC} on HQ-CLI"
-echo -e " Both hosts already have the key/cert files (delivered by this"
-echo -e " script, just now) and gost-isp.sh / gost-hqcli.sh itself"
-echo -e " (pre-fetched back when isp.sh / HQ-CLI.sh were first run)"
-echo -e " sitting in the same directory - just run:"
 echo
-echo -e "   On ISP:     ./gost-isp.sh"
-echo -e "   On HQ-CLI:  ./gost-hqcli.sh"
+echo -e " 1) ${YELLOW}ISP${NC} ($ISP_HOST), as root"
+if [ "$ISP_OK" = 1 ]; then
+    echo -e "    Certificates are in /root: $WEB_FQDN.key/.cer, $DOCKER_FQDN.key/.cer"
+else
+    echo -e "    ${RED}Delivery failed.${NC} Copy them again from this host (HQ-SRV):"
+    echo -e "      cd $CA_DIR && scp $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer $ISP_USER@$ISP_HOST:~/"
+fi
+echo -e "    Then run: bash gost-isp.sh"
+echo -e "    (isp.sh pre-fetched it into the directory it ran from; if it is not there:"
+echo -e "     wget -O gost-isp.sh $(dirname "$RAW_URL")/gost-isp.sh)"
 echo
-echo -e " If either file is missing there, fetch it again:"
-echo -e "   wget -O gost-isp.sh   $(dirname "$RAW_URL")/gost-isp.sh"
-echo -e "   wget -O gost-hqcli.sh $(dirname "$RAW_URL")/gost-hqcli.sh"
+echo -e " 2) ${YELLOW}HQ-CLI${NC} (${HQCLI_HOST:-address unknown}), as root"
+if [ "$HQCLI_OK" = 1 ]; then
+    echo -e "    CA certificate is in /home/$HQCLI_USER/ca.cer"
+else
+    echo -e "    ${RED}Delivery failed.${NC} Find HQ-CLI's address on it with: ip -4 addr"
+    echo -e "    then copy the CA certificate from this host (HQ-SRV):"
+    echo -e "      scp -P $HQCLI_PORT $CA_CER $HQCLI_USER@<HQ-CLI address>:~/"
+fi
+echo -e "    Then run: bash gost-hqcli.sh"
+echo -e "    (HQ-CLI.sh pre-fetched it into the directory it ran from; if it is not there:"
+echo -e "     wget -O gost-hqcli.sh $(dirname "$RAW_URL")/gost-hqcli.sh)"
 echo -e "${CYAN}============================================================${NC}"
 echo

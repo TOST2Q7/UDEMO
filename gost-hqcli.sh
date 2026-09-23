@@ -9,16 +9,27 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 
 WEB_FQDN="web.au-team.irpo"
 DOCKER_FQDN="docker.au-team.irpo"
-CA_CER="$HOME/ca.cer"
+HQCLI_USER="sshuser"
 ANCHOR="/etc/pki/ca-trust/source/anchors/ca.cer"
 # ===========================================================
 
-# ca.cer is expected to already be here, delivered by gost.sh
-# (run on HQ-SRV) via scp
-if [ ! -s "$CA_CER" ]; then
-    echo "Missing $CA_CER - run gost.sh on HQ-SRV first, it delivers this file here." >&2
+# gost.sh (on HQ-SRV) copies ca.cer into sshuser's home over scp, but
+# this script is usually run as root, whose $HOME is /root
+USER_HOME="$(getent passwd "$HQCLI_USER" | cut -d: -f6)"
+CA_CER=""
+for c in "$USER_HOME/ca.cer" "$HOME/ca.cer" "$DIR/ca.cer"; do
+    if [ -s "$c" ]; then
+        CA_CER="$c"
+        break
+    fi
+done
+
+if [ -z "$CA_CER" ]; then
+    echo "ca.cer not found in $USER_HOME, $HOME or $DIR." >&2
+    echo "Run gost.sh on HQ-SRV first - it copies ca.cer to $USER_HOME on this host." >&2
     exit 1
 fi
+echo "Using $CA_CER"
 
 sudo cp "$CA_CER" "$ANCHOR"
 sudo update-ca-trust
