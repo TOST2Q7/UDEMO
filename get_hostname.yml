@@ -28,6 +28,6 @@
       assert:
         that:
           - info_file.stat.exists
-        fail_msg: "Файл /etc/ansible/PC-INFO/{{ ansible_hostname }}.yml не был создан"
-        success_msg: "Файл /etc/ansible/PC-INFO/{{ ansible_hostname }}.yml создан корректно"
+        fail_msg: "Файл /etc/ansible/PC_INFO/{{ ansible_hostname }}.yml не был создан"
+        success_msg: "Файл /etc/ansible/PC_INFO/{{ ansible_hostname }}.yml создан корректно"
       delegate_to: localhost
