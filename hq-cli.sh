@@ -46,8 +46,14 @@ gpasswd -a sshuser wheel
 # Configure passwordless sudo
 echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+# Install and enable sshd - Alt Workstation does not always ship it, and
+# without it gost.sh / ansible cannot reach this host on 2027
+apt-get install -y openssh-server
+systemctl enable --now sshd
+
 # Configure SSH
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+sed -i 's/^#\?Port .*/Port 2027/' /etc/openssh/sshd_config
+grep -q "^Port 2027" /etc/openssh/sshd_config || echo "Port 2027" >> /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
@@ -56,7 +62,7 @@ echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 # Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Restart SSH
+# Restart SSH so it listens on 2027
 systemctl restart sshd
 
 echo "Configuration complete:"
@@ -100,7 +106,10 @@ check "SSH root login disabled"                     'grep -q "^PermitRootLogin n
 check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
+check "openssh-server installed"                    'rpm -q openssh-server'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
+check "sshd listens on port 2027"                   'ss -tln | grep -q ":2027 "'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
