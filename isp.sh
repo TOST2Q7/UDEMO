@@ -11,8 +11,19 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 # Set hostname
 hostnamectl set-hostname isp.au-team.irpo
 
-# Set timezone
-timedatectl set-timezone Asia/Krasnoyarsk
+# Set timezone (Alt JeOS can ship without the time zone database)
+apt-get update
+apt-get install -y tzdata
+if [ -z "$(find /usr/share/zoneinfo -name Krasnoyarsk)" ]; then
+    echo "Asia/Krasnoyarsk not found in /usr/share/zoneinfo - tzdata did not install" >&2
+elif ! timedatectl set-timezone Asia/Krasnoyarsk; then
+    # timedatectl does not know the zone: point /etc/localtime at it by hand
+    rm -f /etc/localtime
+    ln -s /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
+fi
+timedatectl | grep "Time zone"
+ls -l /etc/localtime
+date
 
 # Create interface directories
 mkdir -p /etc/net/ifaces/{enp7s2,enp7s3}
@@ -102,7 +113,9 @@ check() {
 : > "$LOG"
 echo "=== Checking isp configuration ===" | tee -a "$LOG"
 check "Hostname = isp.au-team.irpo"                 '[ "$(hostnamectl --static)" = "isp.au-team.irpo" ]'
-check "Timezone Asia/Krasnoyarsk"                   '[ "$(timedatectl show -p Timezone --value)" = "Asia/Krasnoyarsk" ]'
+check "tzdata installed"                            'rpm -q tzdata'
+check "/etc/localtime -> Asia/Krasnoyarsk"          'readlink /etc/localtime | grep -q "Asia/Krasnoyarsk$"'
+check "Local time is UTC+7"                         '[ "$(date +%z)" = "+0700" ]'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
 check "Address 172.16.1.1/28 on enp7s2"             'ip -4 addr show enp7s2 | grep -q "172.16.1.1/28"'
 check "Interface enp7s3 is up"                       'ip addr show enp7s3'
