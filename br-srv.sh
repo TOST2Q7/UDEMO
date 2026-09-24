@@ -84,6 +84,13 @@ mkdir -p /etc/ansible
 cd /etc/ansible
 wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
 
+cat > /etc/ansible/ansible.cfg <<EOF
+[defaults]
+interpreter_python = /usr/bin/python3
+inventory = /etc/ansible/inventory.yml
+host_key_checking = false
+EOF
+
 # ===========================================================
 # Point DNS at HQ-SRV - done after the last download, which still
 # needs the public resolver
@@ -98,6 +105,7 @@ check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 
 check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'
+check "ansible.cfg configured"                      'grep -qx "inventory = /etc/ansible/inventory.yml" /etc/ansible/ansible.cfg && grep -qx "host_key_checking = false" /etc/ansible/ansible.cfg'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 echo
@@ -157,8 +165,12 @@ if [ -n "$FOUND_IP" ]; then
     echo "Host was found: $FOUND_IP"
     # inventory.yml ships a fixed HQ-CLI address, but HQ-CLI gets a random one from DHCP
     sed -i "/^ *hq-cli:/,/ansible_host:/ s/ansible_host: .*/ansible_host: $FOUND_IP/" /etc/ansible/inventory.yml
-    exec sshpass -p 'P@ssw0rd' ssh -p "$PORT" "${USER}@${FOUND_IP}"
 else
-    echo "No host found on ${SUBNET}.2-10 port ${PORT}" >&2
-    exit 1
+    echo "No host found on ${SUBNET}.2-10 port ${PORT} - hq-cli keeps its inventory address" >&2
 fi
+
+ansible -m ping all
+
+[ -n "$FOUND_IP" ] && sshpass -p 'P@ssw0rd' ssh -p "$PORT" "${USER}@${FOUND_IP}"
+
+exec bash

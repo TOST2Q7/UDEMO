@@ -193,3 +193,5 @@ echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
 echo -e "             and the DC forwards everything else back here."
 echo -e "${CYAN}============================================================${NC}"
 echo
+
+exec bash
