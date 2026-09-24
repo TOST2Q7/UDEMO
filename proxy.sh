@@ -130,7 +130,8 @@ echo -e " The HTTP reverse proxy is up:"
 echo -e "   http://$WEB_FQDN    -> $WEB_BACKEND (login $AUTH_USER / $AUTH_PASS)"
 echo -e "   http://$DOCKER_FQDN -> $DOCKER_BACKEND"
 echo -e " A 502 on either means its backend is not up yet (web.sh / docker.sh)."
-echo -e " For HTTPS: ${YELLOW}gost.sh${NC} on HQ-SRV, then ${YELLOW}gost-isp.sh${NC} here."
+echo -e " For HTTPS: ${YELLOW}gost.sh${NC} on HQ-SRV, then ${YELLOW}gost-isp.sh${NC} here"
+echo -e " (pre-fetched by isp.sh), then ${YELLOW}gost-hqcli.sh${NC} on HQ-CLI."
 echo -e "${CYAN}============================================================${NC}"
 echo
 

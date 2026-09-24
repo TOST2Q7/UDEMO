@@ -209,7 +209,8 @@ echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
 echo -e "             and the DC forwards everything else back here."
 echo
 echo -e " Also      : ${YELLOW}web.sh${NC} on this host (the site + MariaDB from the"
-echo -e "             exam ISO - attach it as /dev/sr0 first)."
+echo -e "             exam ISO - attach it as /dev/sr0 first):"
+echo -e "   wget -O web.sh $(dirname "$RAW_URL")/web.sh && bash web.sh"
 echo -e "${CYAN}============================================================${NC}"
 echo
 

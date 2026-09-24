@@ -136,8 +136,10 @@ echo -e "${CYAN}============================================================${NC
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Domain controller deployment complete."
-echo -e " Run next : ${YELLOW}docker.sh${NC} on this host (testapp + MariaDB"
-echo -e "            from the exam ISO - attach it as /dev/sr0 first)."
 echo -e " (Requires hq-srv.sh to already be running for DNS forwarding.)"
+echo
+echo -e " Run next : ${YELLOW}docker.sh${NC} on this host (testapp + MariaDB"
+echo -e "            from the exam ISO - attach it as /dev/sr0 first):"
+echo -e "   wget -O docker.sh $(dirname "$RAW_URL")/docker.sh && bash docker.sh"
 echo -e "${CYAN}============================================================${NC}"
 echo

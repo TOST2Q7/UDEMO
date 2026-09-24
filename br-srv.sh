@@ -129,8 +129,8 @@ echo -e "${CYAN}============================================================${NC
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for au-team.irpo."
-echo -e " After that every host is deployed; use /etc/ansible/inventory.yml"
-echo -e " here to manage the lab with Ansible."
+echo -e " Then, also on this host: ${YELLOW}docker.sh${NC} (testapp + MariaDB from the exam ISO)."
+echo -e " Use /etc/ansible/inventory.yml here to manage the lab with Ansible."
 echo -e "${CYAN}============================================================${NC}"
 echo
 

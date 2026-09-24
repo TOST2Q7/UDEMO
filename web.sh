@@ -120,7 +120,9 @@ echo -e "${CYAN}============================================================${NC
 echo -e " The site is up on this host, port 80."
 echo -e " HQ-RTR forwards 172.16.1.2:8080 here. Once ${YELLOW}docker.sh${NC} has run"
 echo -e " on BR-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
-echo -e " web.au-team.irpo and docker.au-team.irpo)."
+echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
+echo -e " if it is not there:"
+echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
 echo -e "${CYAN}============================================================${NC}"
 echo
 
