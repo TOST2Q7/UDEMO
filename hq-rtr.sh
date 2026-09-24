@@ -123,6 +123,8 @@ echo "OSPF configuration complete!"
 # Set up NAT
 apt-get install iptables -y
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
+# Forward 8080 to the site on HQ-SRV (web.sh), ISP's nginx proxies to it
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
 #iptables -t nat -A PREROUTING -p tcp -d 192.168.100.1 --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
@@ -210,6 +212,7 @@ check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/fr
 check "Tunnel to branch responds (10.10.10.2)"      'ping -c 3 -W 1 10.10.10.2'
 check "HQ-SRV reachable (192.168.100.2)"            'ping -c 3 -W 1 192.168.100.2'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
+check "Site DNAT (8080 -> HQ-SRV:80) configured"    'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "User net_admin exists"                       'id net_admin'
 check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'

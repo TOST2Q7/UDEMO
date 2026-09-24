@@ -207,6 +207,9 @@ echo -e " Later     : ${YELLOW}samba.sh${NC} goes on BR-SRV (the domain controll
 echo -e "             after br-srv.sh. This host already forwards au-team.irpo"
 echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
 echo -e "             and the DC forwards everything else back here."
+echo
+echo -e " Also      : ${YELLOW}web.sh${NC} on this host (the site + MariaDB from the"
+echo -e "             exam ISO - attach it as /dev/sr0 first)."
 echo -e "${CYAN}============================================================${NC}"
 echo
 

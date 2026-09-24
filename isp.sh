@@ -104,6 +104,9 @@ apt-get update
 # ===========================================================
 wget -O "$DIR/gost-isp.sh" "$(dirname "$RAW_URL")/gost-isp.sh" && chmod +x "$DIR/gost-isp.sh" \
     || echo "Could not pre-fetch gost-isp.sh, fetch it manually later" >&2
+# proxy.sh (the HTTP reverse proxy) runs once web.sh and docker.sh are up
+wget -O "$DIR/proxy.sh" "$(dirname "$RAW_URL")/proxy.sh" && chmod +x "$DIR/proxy.sh" \
+    || echo "Could not pre-fetch proxy.sh, fetch it manually later" >&2
 
 # ===========================================================
 # Final check of everything this script configured
@@ -162,7 +165,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/gost-isp.sh" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$DIR/gost-isp.sh" "$DIR/proxy.sh" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
@@ -174,8 +177,10 @@ echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Run next : ${YELLOW}hq-rtr.sh${NC} (HQ router) and ${YELLOW}br-rtr.sh${NC} (branch router)"
 echo -e " Segment  : WAN uplinks toward this ISP"
-echo -e " (gost-isp.sh was pre-fetched into this directory - run it much"
-echo -e "  later, once gost.sh on HQ-SRV has delivered certificates here)"
+echo -e " (proxy.sh and gost-isp.sh were pre-fetched into this directory:"
+echo -e "  proxy.sh once web.sh on HQ-SRV and docker.sh on BR-SRV are up,"
+echo -e "  gost-isp.sh after that, once gost.sh on HQ-SRV has delivered"
+echo -e "  certificates here)"
 echo
 echo -e " Before running them, set static WAN addresses on each router (enp7s1):"
 echo
