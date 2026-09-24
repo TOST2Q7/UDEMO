@@ -89,7 +89,7 @@ echo "Certificates generated in $CA_DIR"
 # Point DNS at HQ-SRV - done last, everything above still needs
 # the public resolver
 # ===========================================================
-# Earlier versions of HQ-SRV.sh made it immutable
+# Earlier versions of hq-srv.sh made it immutable
 chattr -i /etc/resolv.conf 2>/dev/null
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 127.0.0.1
@@ -224,7 +224,7 @@ else
     echo -e "      scp -P $HQCLI_PORT $CA_CER $HQCLI_USER@<HQ-CLI address>:~/"
 fi
 echo -e "    Then run: bash gost-hqcli.sh"
-echo -e "    (HQ-CLI.sh pre-fetched it into the directory it ran from; if it is not there:"
+echo -e "    (hq-cli.sh pre-fetched it into the directory it ran from; if it is not there:"
 echo -e "     wget -O gost-hqcli.sh $(dirname "$RAW_URL")/gost-hqcli.sh)"
 echo -e "${CYAN}============================================================${NC}"
 echo

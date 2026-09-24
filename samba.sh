@@ -136,6 +136,6 @@ echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Domain controller deployment complete."
 echo -e " Nothing else to configure on this host."
-echo -e " (Requires HQ-SRV.sh to already be running for DNS forwarding.)"
+echo -e " (Requires hq-srv.sh to already be running for DNS forwarding.)"
 echo -e "${CYAN}============================================================${NC}"
 echo

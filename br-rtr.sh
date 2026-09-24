@@ -180,7 +180,7 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}BR-SRV.sh${NC} on the branch server host"
+echo -e " Run next : ${YELLOW}br-srv.sh${NC} on the branch server host"
 echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN)"
 echo
 echo -e " Before running it, set a static address on that host (enp7s1):"

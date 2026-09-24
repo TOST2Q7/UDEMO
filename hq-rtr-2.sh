@@ -79,7 +79,7 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}HQ-CLI.sh${NC} on the HQ client"
+echo -e " Run next : ${YELLOW}hq-cli.sh${NC} on the HQ client"
 echo -e " Segment  : VLAN 200, 192.168.200.0/28 (DHCP)"
 echo
 echo -e " No manual network setup is needed on that host - it gets an"

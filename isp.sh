@@ -138,7 +138,7 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}HQ-RTR.sh${NC} (HQ router) and ${YELLOW}BR-RTR.sh${NC} (branch router)"
+echo -e " Run next : ${YELLOW}hq-rtr.sh${NC} (HQ router) and ${YELLOW}br-rtr.sh${NC} (branch router)"
 echo -e " Segment  : WAN uplinks toward this ISP"
 echo -e " (gost-isp.sh was pre-fetched into this directory - run it much"
 echo -e "  later, once gost.sh on HQ-SRV has delivered certificates here)"

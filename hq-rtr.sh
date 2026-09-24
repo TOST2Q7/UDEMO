@@ -234,7 +234,7 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}HQ-SRV.sh${NC} on the HQ server host"
+echo -e " Run next : ${YELLOW}hq-srv.sh${NC} on the HQ server host"
 echo -e " Segment  : VLAN 100, 192.168.100.0/27"
 echo
 echo -e " Before running it, tag VLAN 100 on that host (enp7s1):"
