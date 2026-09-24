@@ -34,8 +34,8 @@ SSH_PASSWORD="P@ssw0rd"
 mkdir -p "$CA_DIR"
 cd "$CA_DIR" || exit 1
 
-# Install GOST support for OpenSSL
-apt-get install -y openssl-gost-engine
+# Install GOST support for OpenSSL; sshpass types the lab password for scp
+apt-get install -y openssl-gost-engine sshpass
 
 # Enable the GOST engine system-wide
 control openssl-gost enabled
@@ -151,10 +151,32 @@ done
 ISP_OK=0
 HQCLI_OK=0
 
-echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST):"
-echo -e "${YELLOW}Username: $ISP_USER${NC}"
-echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
-scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/" \
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
+
+# copy_files <port> <user@host> <files...>
+# Types the lab password with sshpass; if that fails, says why and
+# retries with a plain scp so the password can be typed by hand
+copy_files() {
+    local port="$1" dest="$2" rc=1; shift 2
+    if command -v sshpass >/dev/null; then
+        sshpass -p "$SSH_PASSWORD" scp -P "$port" "${SSH_OPTS[@]}" "$@" "$dest:~/"
+        rc=$?
+        [ "$rc" = 0 ] && return 0
+        case "$rc" in
+            5) echo -e "${RED}$dest rejected password $SSH_PASSWORD${NC}" >&2 ;;
+            *) echo -e "${RED}scp to $dest:$port failed (exit $rc) - sshd refused or closed the connection${NC}" >&2 ;;
+        esac
+    fi
+    if [ -r /dev/tty ]; then
+        echo -e "${YELLOW}Retrying $dest - type the password yourself:${NC}"
+        scp -P "$port" "${SSH_OPTS[@]}" "$@" "$dest:~/" </dev/tty && return 0
+    fi
+    return 1
+}
+
+echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST) as $ISP_USER:"
+copy_files 22 "$ISP_USER@$ISP_HOST" \
+    "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" \
     && ISP_OK=1
 
 # True if something accepts TCP connections on $1:$2
@@ -164,38 +186,51 @@ port_open() {
 
 if [ -z "$HQCLI_HOST" ]; then
     echo "Looking for HQ-CLI in $HQCLI_SUBNET.2-10 (SSH port $HQCLI_PORT)..."
+    # Probe every address at once: the port first (works even if ICMP is
+    # blocked), ping only to tell "host up, sshd not there" from "no host"
+    SCAN_DIR="$(mktemp -d)"
+    for i in $HQCLI_POOL; do
+        (
+            ip="$HQCLI_SUBNET.$i"
+            if port_open "$ip" "$HQCLI_PORT"; then
+                echo open > "$SCAN_DIR/$ip"
+            elif ping -c 1 -W 2 "$ip" &>/dev/null; then
+                echo closed > "$SCAN_DIR/$ip"
+            fi
+        ) &
+    done
+    wait
     for i in $HQCLI_POOL; do
         ip="$HQCLI_SUBNET.$i"
-        # Ping first: a dead address then costs 1 s instead of a hanging connect
-        if ! ping -c 1 -W 1 "$ip" &>/dev/null; then
-            continue
-        fi
-        if port_open "$ip" "$HQCLI_PORT"; then
-            echo "  $ip: SSH port $HQCLI_PORT is open - using it"
-            HQCLI_HOST="$ip"
-            break
-        fi
-        echo -e "  ${RED}$ip answers ping, but port $HQCLI_PORT is closed${NC} (is hq-cli.sh done there? check: ss -tlnp | grep $HQCLI_PORT)"
+        case "$(cat "$SCAN_DIR/$ip" 2>/dev/null)" in
+            open)
+                echo -e "  ${GREEN}$ip: SSH port $HQCLI_PORT is open${NC}"
+                [ -z "$HQCLI_HOST" ] && HQCLI_HOST="$ip"
+                ;;
+            closed)
+                echo -e "  ${RED}$ip answers ping, but port $HQCLI_PORT is closed${NC} (on HQ-CLI check: ss -tlnp | grep $HQCLI_PORT)"
+                ;;
+        esac
     done
+    rm -rf "$SCAN_DIR"
 fi
 
 # Nothing found automatically - ask for the address instead of giving up
-if [ -z "$HQCLI_HOST" ] && [ -t 0 ]; then
+# (/dev/tty, so this works even when the script was piped into bash)
+if [ -z "$HQCLI_HOST" ] && [ -r /dev/tty ]; then
     echo -e "${RED}HQ-CLI not found automatically in $HQCLI_SUBNET.2-10.${NC}"
     echo "On HQ-CLI run: ip -4 addr   - and type its address here."
-    read -rp "HQ-CLI address (Enter to skip): " HQCLI_HOST
+    read -rp "HQ-CLI address (Enter to skip): " HQCLI_HOST </dev/tty
     if [ -n "$HQCLI_HOST" ] && ! port_open "$HQCLI_HOST" "$HQCLI_PORT"; then
         echo -e "${RED}Warning: port $HQCLI_PORT on $HQCLI_HOST does not answer, scp will likely fail${NC}" >&2
     fi
 fi
 
 if [ -n "$HQCLI_HOST" ]; then
-    echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST):"
-    echo -e "${YELLOW}Username: $HQCLI_USER${NC}"
-    echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
-    scp -P "$HQCLI_PORT" "$CA_CER" "$HQCLI_USER@$HQCLI_HOST:~/" && HQCLI_OK=1
+    echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST) as $HQCLI_USER:"
+    copy_files "$HQCLI_PORT" "$HQCLI_USER@$HQCLI_HOST" "$CA_CER" && HQCLI_OK=1
 else
-    echo -e "${RED}HQ-CLI not found: nothing answers on port $HQCLI_PORT in $HQCLI_SUBNET.2-10${NC}" >&2
+    echo -e "${RED}HQ-CLI address unknown - CA certificate not copied${NC}" >&2
 fi
 
 check "Key/cert pairs delivered to ISP ($ISP_HOST)"                  "[ $ISP_OK = 1 ]"
@@ -232,6 +267,9 @@ if [ "$ISP_OK" = 1 ]; then
 else
     echo -e "    ${RED}Delivery failed.${NC} Copy them again from this host (HQ-SRV):"
     echo -e "      cd $CA_DIR && scp $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer $ISP_USER@$ISP_HOST:~/"
+    echo -e "    If ssh to ISP closes right after the password, check on ISP:"
+    echo -e "      grep -i '^PermitRootLogin' /etc/openssh/sshd_config   (must be: yes)"
+    echo -e "      journalctl -u sshd -n 20"
 fi
 echo -e "    Then run: bash gost-isp.sh"
 echo -e "    (isp.sh pre-fetched it into the directory it ran from; if it is not there:"
