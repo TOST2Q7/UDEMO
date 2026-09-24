@@ -166,12 +166,15 @@ sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.0.2
 PORT=2027
 USER=sshuser
 SUBNET=192.168.200
-TIMEOUT=1
+TIMEOUT=3
 FOUND_IP=""
 
+# bash's /dev/tcp instead of nc, which Alt does not ship by default;
+# ping first so a dead address costs 1 s instead of a hanging connect
 for i in $(seq 2 10); do
     IP="${SUBNET}.${i}"
-    if nc -z -w "$TIMEOUT" "$IP" "$PORT" 2>/dev/null; then
+    ping -c 1 -W 1 "$IP" &>/dev/null || continue
+    if timeout "$TIMEOUT" bash -c "</dev/tcp/$IP/$PORT" 2>/dev/null; then
         FOUND_IP="$IP"
         break
     fi

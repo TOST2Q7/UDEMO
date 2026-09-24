@@ -157,14 +157,36 @@ echo -e "${YELLOW}Password: $SSH_PASSWORD${NC}"
 scp "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" "$ISP_USER@$ISP_HOST:~/" \
     && ISP_OK=1
 
+# True if something accepts TCP connections on $1:$2
+port_open() {
+    timeout 3 bash -c "</dev/tcp/$1/$2" 2>/dev/null
+}
+
 if [ -z "$HQCLI_HOST" ]; then
     echo "Looking for HQ-CLI in $HQCLI_SUBNET.2-10 (SSH port $HQCLI_PORT)..."
     for i in $HQCLI_POOL; do
-        if timeout 1 bash -c "</dev/tcp/$HQCLI_SUBNET.$i/$HQCLI_PORT" 2>/dev/null; then
-            HQCLI_HOST="$HQCLI_SUBNET.$i"
+        ip="$HQCLI_SUBNET.$i"
+        # Ping first: a dead address then costs 1 s instead of a hanging connect
+        if ! ping -c 1 -W 1 "$ip" &>/dev/null; then
+            continue
+        fi
+        if port_open "$ip" "$HQCLI_PORT"; then
+            echo "  $ip: SSH port $HQCLI_PORT is open - using it"
+            HQCLI_HOST="$ip"
             break
         fi
+        echo -e "  ${RED}$ip answers ping, but port $HQCLI_PORT is closed${NC} (is hq-cli.sh done there? check: ss -tlnp | grep $HQCLI_PORT)"
     done
+fi
+
+# Nothing found automatically - ask for the address instead of giving up
+if [ -z "$HQCLI_HOST" ] && [ -t 0 ]; then
+    echo -e "${RED}HQ-CLI not found automatically in $HQCLI_SUBNET.2-10.${NC}"
+    echo "On HQ-CLI run: ip -4 addr   - and type its address here."
+    read -rp "HQ-CLI address (Enter to skip): " HQCLI_HOST
+    if [ -n "$HQCLI_HOST" ] && ! port_open "$HQCLI_HOST" "$HQCLI_PORT"; then
+        echo -e "${RED}Warning: port $HQCLI_PORT on $HQCLI_HOST does not answer, scp will likely fail${NC}" >&2
+    fi
 fi
 
 if [ -n "$HQCLI_HOST" ]; then
