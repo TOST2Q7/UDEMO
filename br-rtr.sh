@@ -76,6 +76,8 @@ iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 # Forward port 2027 arriving from outside (WAN) to BR-SRV; matching the LAN
 # address instead would hijack SSH to this router itself
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
+# Forward 8080 to testapp on BR-SRV (docker.sh), ISP's nginx proxies to it
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 
@@ -158,6 +160,7 @@ check "Tunnel to ISP responds (10.10.10.1)"         'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
+check "testapp DNAT (8080) configured"              'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "User net_admin exists"                       'id net_admin'
 check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'

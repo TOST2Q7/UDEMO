@@ -80,6 +80,7 @@ cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check() {
@@ -135,7 +136,8 @@ echo -e "${CYAN}============================================================${NC
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo -e " Domain controller deployment complete."
-echo -e " Nothing else to configure on this host."
+echo -e " Run next : ${YELLOW}docker.sh${NC} on this host (testapp + MariaDB"
+echo -e "            from the exam ISO - attach it as /dev/sr0 first)."
 echo -e " (Requires hq-srv.sh to already be running for DNS forwarding.)"
 echo -e "${CYAN}============================================================${NC}"
 echo
