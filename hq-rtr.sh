@@ -147,6 +147,18 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/ss
 systemctl restart sshd
 
 # ===========================================================
+# NTP client: sync time from the chrony server on ISP
+# ===========================================================
+apt-get install -y chrony
+cat > /etc/chrony.conf <<EOF
+server 172.16.1.1 iburst
+EOF
+systemctl enable --now chronyd
+systemctl restart chronyd
+# Give the first sync up to ~30 s so the check below sees it
+chronyc waitsync 15 0 0 2 >/dev/null
+
+# ===========================================================
 # Point DNS at HQ-SRV - done last, everything above still needs
 # the public resolver
 # ===========================================================
@@ -205,6 +217,10 @@ check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL
 check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "chronyd active"                              'systemctl is-active --quiet chronyd'
+check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
+check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
+check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
 check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 

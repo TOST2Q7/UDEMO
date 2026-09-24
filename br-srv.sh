@@ -92,6 +92,18 @@ host_key_checking = false
 EOF
 
 # ===========================================================
+# NTP client: sync time from the chrony server on ISP
+# ===========================================================
+apt-get install -y chrony
+cat > /etc/chrony.conf <<EOF
+server 172.16.2.1 iburst
+EOF
+systemctl enable --now chronyd
+systemctl restart chronyd
+# Give the first sync up to ~30 s so the check below sees it
+chronyc waitsync 15 0 0 2 >/dev/null
+
+# ===========================================================
 # Point DNS at HQ-SRV - done after the last download, which still
 # needs the public resolver
 # ===========================================================
@@ -106,6 +118,10 @@ check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'
 check "ansible.cfg configured"                      'grep -qx "inventory = /etc/ansible/inventory.yml" /etc/ansible/ansible.cfg && grep -qx "host_key_checking = false" /etc/ansible/ansible.cfg'
+check "chronyd active"                              'systemctl is-active --quiet chronyd'
+check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
+check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 iburst" /etc/chrony.conf'
+check "Time synced from ISP (172.16.2.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.2.1 "'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 echo

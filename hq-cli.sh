@@ -10,6 +10,18 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 
 apt-get update && apt-get install -y yandex-browser-stable
 
+# ===========================================================
+# NTP client: sync time from the chrony server on ISP
+# ===========================================================
+apt-get install -y chrony
+cat > /etc/chrony.conf <<EOF
+server 172.16.1.1 iburst
+EOF
+systemctl enable --now chronyd
+systemctl restart chronyd
+# Give the first sync up to ~30 s so the check below sees it
+chronyc waitsync 15 0 0 2 >/dev/null
+
 hostnamectl set-hostname hq-cli.au-team.irpo
 
 # Mount NFS share
@@ -89,6 +101,10 @@ check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuse
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "chronyd active"                              'systemctl is-active --quiet chronyd'
+check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
+check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
+check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

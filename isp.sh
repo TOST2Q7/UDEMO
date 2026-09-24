@@ -25,6 +25,23 @@ timedatectl | grep "Time zone"
 ls -l /etc/localtime
 date
 
+# NTP server: serve the local clock as stratum 5 to every other host
+# (the LANs reach it NAT'ed as the routers' 172.16.x.2 WAN addresses)
+apt-get install -y chrony
+cat > /etc/chrony.conf <<EOF
+local stratum 5
+allow 172.16.0.0/16
+allow 192.168.0.0/16
+allow 10.10.10.0/30
+EOF
+systemctl enable --now chronyd
+systemctl restart chronyd
+# The local reference takes a moment to kick in after a restart
+for i in $(seq 10); do
+    chronyc tracking | grep -qE '^Stratum +: 5$' && break
+    sleep 1
+done
+
 # Create interface directories
 mkdir -p /etc/net/ifaces/{enp7s2,enp7s3}
 
@@ -116,6 +133,10 @@ check "Hostname = isp.au-team.irpo"                 '[ "$(hostnamectl --static)"
 check "tzdata installed"                            'rpm -q tzdata'
 check "/etc/localtime -> Asia/Krasnoyarsk"          'readlink /etc/localtime | grep -q "Asia/Krasnoyarsk$"'
 check "Local time is UTC+7"                         '[ "$(date +%z)" = "+0700" ]'
+check "chronyd active"                              'systemctl is-active --quiet chronyd'
+check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
+check "chrony.conf: local stratum 5"                'grep -qx "local stratum 5" /etc/chrony.conf'
+check "NTP server runs at stratum 5"                'chronyc tracking | grep -qE "^Stratum +: 5$"'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
 check "Address 172.16.1.1/28 on enp7s2"             'ip -4 addr show enp7s2 | grep -q "172.16.1.1/28"'
 check "Interface enp7s3 is up"                       'ip addr show enp7s3'

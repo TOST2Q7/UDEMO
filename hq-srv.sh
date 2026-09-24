@@ -92,6 +92,18 @@ touch /raid/nfs/test
 echo "Done! RAID and NFS configured."
 
 # ===========================================================
+# NTP client: sync time from the chrony server on ISP
+# ===========================================================
+apt-get install -y chrony
+cat > /etc/chrony.conf <<EOF
+server 172.16.1.1 iburst
+EOF
+systemctl enable --now chronyd
+systemctl restart chronyd
+# Give the first sync up to ~30 s so the check below sees it
+chronyc waitsync 15 0 0 2 >/dev/null
+
+# ===========================================================
 # Point DNS at this host's own dnsmasq - done last, everything above
 # still needs the public resolver
 # ===========================================================
@@ -151,6 +163,10 @@ check "NFS server active"                           'systemctl is-active --quiet
 check "/raid/nfs directory exists"                  '[ -d /raid/nfs ]'
 check "NFS export configured"                       'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
 check "NFS test file created"                       '[ -f /raid/nfs/test ]'
+check "chronyd active"                              'systemctl is-active --quiet chronyd'
+check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
+check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
+check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
 check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
 check "/etc/resolv.conf uses 127.0.0.1"             'grep -qx "nameserver 127.0.0.1" /etc/resolv.conf'
 check "Local DNS answers hq-srv.au-team.irpo"       'getent hosts hq-srv.au-team.irpo | grep -q "^192.168.100.2 "'
