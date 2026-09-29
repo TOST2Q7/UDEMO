@@ -12,7 +12,7 @@ DAYS=30
 
 CA_KEY="$CA_DIR/ca.key"
 CA_CER="$CA_DIR/ca.cer"
-CA_SUBJ="/C=RU/ST=Krasnoyarsk/O=AU-TEAM/CN=AU-TEAM Root CA"
+CA_SUBJ="/C=RU/O=au-team.irpo/CN=hq-srv.au-team.irpo"
 
 WEB_FQDN="web.au-team.irpo"
 DOCKER_FQDN="docker.au-team.irpo"
