@@ -15,11 +15,15 @@ ANCHOR="/etc/pki/ca-trust/source/anchors/ca.cer"
 PROXY_IP="172.16.1.1"
 # ===========================================================
 
-# gost.sh (on HQ-SRV) copies ca.cer into sshuser's home over scp, but
+# gost.sh (on HQ-SRV) copies ca.cer into sshuser's Documents folder, but
 # this script is usually run as root, whose $HOME is /root
 USER_HOME="$(getent passwd "$HQCLI_USER" | cut -d: -f6)"
+# Documents as sshuser's desktop names it (user-dirs.dirs), if it has one
+USER_DOCS="$(sed -n 's/^XDG_DOCUMENTS_DIR="\(.*\)"$/\1/p' "$USER_HOME/.config/user-dirs.dirs" 2>/dev/null)"
+USER_DOCS="${USER_DOCS/\$HOME/$USER_HOME}"
 CA_CER=""
-for c in "$USER_HOME/ca.cer" "$HOME/ca.cer" "$DIR/ca.cer"; do
+for c in ${USER_DOCS:+"$USER_DOCS/ca.cer"} "$USER_HOME/Документы/ca.cer" "$USER_HOME/Documents/ca.cer" \
+         "$USER_HOME/ca.cer" "$HOME/ca.cer" "$DIR/ca.cer"; do
     if [ -s "$c" ]; then
         CA_CER="$c"
         break
@@ -27,8 +31,8 @@ for c in "$USER_HOME/ca.cer" "$HOME/ca.cer" "$DIR/ca.cer"; do
 done
 
 if [ -z "$CA_CER" ]; then
-    echo "ca.cer not found in $USER_HOME, $HOME or $DIR." >&2
-    echo "Run gost.sh on HQ-SRV first - it copies ca.cer to $USER_HOME on this host." >&2
+    echo "ca.cer not found in $USER_HOME/Документы, $USER_HOME, $HOME or $DIR." >&2
+    echo "Run gost.sh on HQ-SRV first - it copies ca.cer to $USER_HOME/Документы on this host." >&2
     exit 1
 fi
 echo "Using $CA_CER"

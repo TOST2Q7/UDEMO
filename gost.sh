@@ -179,6 +179,31 @@ copy_files 22 "$ISP_USER@$ISP_HOST" \
     "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" \
     && ISP_OK=1
 
+# send_to_documents <port> <user@host> <file>
+# Puts <file> into the user's Documents folder (xdg-user-dir, falling back
+# to ~/Документы) - created if missing, which plain scp cannot do - and
+# prints the path it landed at. Same password handling as copy_files
+send_to_documents() {
+    local port="$1" dest="$2" file="$3" rc=1
+    local cmd='d=$(xdg-user-dir DOCUMENTS 2>/dev/null)
+if [ -z "$d" ] || [ "$d" = "$HOME" ]; then d="$HOME/Документы"; fi
+mkdir -p "$d" && cat > "$d/'"$(basename "$file")"'" && echo "$d/'"$(basename "$file")"'"'
+    if command -v sshpass >/dev/null; then
+        sshpass -p "$SSH_PASSWORD" ssh -p "$port" "${SSH_OPTS[@]}" "$dest" "$cmd" < "$file"
+        rc=$?
+        [ "$rc" = 0 ] && return 0
+        case "$rc" in
+            5) echo -e "${RED}$dest rejected password $SSH_PASSWORD${NC}" >&2 ;;
+            *) echo -e "${RED}ssh to $dest:$port failed (exit $rc) - sshd refused or closed the connection${NC}" >&2 ;;
+        esac
+    fi
+    if [ -r /dev/tty ]; then
+        echo -e "${YELLOW}Retrying $dest - type the password yourself:${NC}" >&2
+        ssh -p "$port" "${SSH_OPTS[@]}" "$dest" "$cmd" < "$file" && return 0
+    fi
+    return 1
+}
+
 # True if something accepts TCP connections on $1:$2
 port_open() {
     timeout 3 bash -c "</dev/tcp/$1/$2" 2>/dev/null
@@ -227,8 +252,8 @@ if [ -z "$HQCLI_HOST" ] && [ -r /dev/tty ]; then
 fi
 
 if [ -n "$HQCLI_HOST" ]; then
-    echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST) as $HQCLI_USER:"
-    copy_files "$HQCLI_PORT" "$HQCLI_USER@$HQCLI_HOST" "$CA_CER" && HQCLI_OK=1
+    echo "Copying the CA root certificate to HQ-CLI ($HQCLI_HOST) as $HQCLI_USER, into Documents:"
+    HQCLI_CA_PATH="$(send_to_documents "$HQCLI_PORT" "$HQCLI_USER@$HQCLI_HOST" "$CA_CER")" && HQCLI_OK=1
 else
     echo -e "${RED}HQ-CLI address unknown - CA certificate not copied${NC}" >&2
 fi
@@ -277,11 +302,11 @@ echo -e "     wget -O gost-isp.sh $(dirname "$RAW_URL")/gost-isp.sh)"
 echo
 echo -e " 2) ${YELLOW}HQ-CLI${NC} (${HQCLI_HOST:-address unknown}), as root"
 if [ "$HQCLI_OK" = 1 ]; then
-    echo -e "    CA certificate is in /home/$HQCLI_USER/ca.cer"
+    echo -e "    CA certificate is in $HQCLI_CA_PATH"
 else
     echo -e "    ${RED}Delivery failed.${NC} Find HQ-CLI's address on it with: ip -4 addr"
     echo -e "    then copy the CA certificate from this host (HQ-SRV):"
-    echo -e "      scp -P $HQCLI_PORT $CA_CER $HQCLI_USER@<HQ-CLI address>:~/"
+    echo -e "      scp -P $HQCLI_PORT $CA_CER $HQCLI_USER@<HQ-CLI address>:~/Документы/"
 fi
 echo -e "    Then run: bash gost-hqcli.sh"
 echo -e "    (hq-cli.sh pre-fetched it into the directory it ran from; if it is not there:"
