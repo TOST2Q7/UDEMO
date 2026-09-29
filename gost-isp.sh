@@ -17,7 +17,7 @@ CERT_SRC="$HOME"
 # ===========================================================
 
 # The key/cert files are expected to already be here, delivered by
-# gost.sh (run on HQ-SRV) via scp
+# gost.sh (run on HQ-SRV) over ssh
 for f in "$WEB_FQDN.key" "$WEB_FQDN.cer" "$DOCKER_FQDN.key" "$DOCKER_FQDN.cer"; do
     if [ ! -s "$CERT_SRC/$f" ]; then
         echo "Missing $CERT_SRC/$f - run gost.sh on HQ-SRV first, it delivers these files here." >&2

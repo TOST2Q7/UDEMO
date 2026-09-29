@@ -26,14 +26,14 @@ HQCLI_PORT=2027
 # asks for it at the end; run "HQCLI_HOST=x.x.x.x ./gost.sh" to skip the question
 HQCLI_HOST="${HQCLI_HOST:-}"
 
-# Tried in this order for every ssh/scp connection
+# Tried in this order for every ssh connection
 SSH_PASSWORDS=("P@ssw0rd" "toor")
 # ===========================================================
 
 mkdir -p "$CA_DIR"
 cd "$CA_DIR" || exit 1
 
-# Install GOST support for OpenSSL; sshpass types the lab password for scp
+# Install GOST support for OpenSSL; sshpass types the lab password for ssh
 apt-get install -y openssl-gost-engine sshpass
 
 # Enable the GOST engine system-wide
@@ -150,7 +150,11 @@ done
 ISP_OK=0
 HQCLI_OK=0
 
-SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
+# Password logins only: hq-cli.sh sets "MaxAuthTries 2", so if root here
+# has ssh keys, offering them first uses up both tries and the password is
+# never asked ("Too many authentication failures")
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5
+          -o PubkeyAuthentication=no -o PreferredAuthentications=password,keyboard-interactive)
 
 # True if /dev/tty can really be opened - "[ -r /dev/tty ]" is true even
 # when there is no terminal to talk to
@@ -158,7 +162,7 @@ have_tty() {
     { : </dev/tty; } 2>/dev/null
 }
 
-# try_passwords <user@host> <stdin file> <scp/ssh command...>
+# try_passwords <user@host> <stdin file> <ssh command...>
 # Runs the command under sshpass with each of SSH_PASSWORDS in turn. Only a
 # wrong password moves on to the next one; anything else (host down, sshd
 # closed the connection) stops right away. If every password fails, retries
@@ -185,10 +189,18 @@ try_passwords() {
     return 1
 }
 
-# copy_files <port> <user@host> <files...> - into the remote home directory
+# copy_files <port> <user@host> <files in CA_DIR...> - into the remote home.
+# Streamed as a tar archive over ssh instead of scp: OpenSSH 9+ scp needs
+# the sftp subsystem on the far side and fails with "subsystem request
+# failed" where it is not configured
 copy_files() {
-    local port="$1" dest="$2"; shift 2
-    try_passwords "$dest" /dev/null scp -P "$port" "${SSH_OPTS[@]}" "$@" "$dest:~/"
+    local port="$1" dest="$2" tmp rc; shift 2
+    tmp="$(mktemp)"
+    tar -cf "$tmp" -C "$CA_DIR" "$@" || { rm -f "$tmp"; return 1; }
+    try_passwords "$dest" "$tmp" ssh -p "$port" "${SSH_OPTS[@]}" "$dest" 'tar -xf - -C ~'
+    rc=$?
+    rm -f "$tmp"
+    return $rc
 }
 
 # send_to_documents <port> <user@host> <file>
@@ -212,7 +224,7 @@ port_open() {
 echo
 echo "Copying $WEB_FQDN and $DOCKER_FQDN key/cert pairs to ISP ($ISP_HOST) as $ISP_USER:"
 copy_files 22 "$ISP_USER@$ISP_HOST" \
-    "$CA_DIR/$WEB_FQDN.key" "$CA_DIR/$WEB_FQDN.cer" "$CA_DIR/$DOCKER_FQDN.key" "$CA_DIR/$DOCKER_FQDN.cer" \
+    "$WEB_FQDN.key" "$WEB_FQDN.cer" "$DOCKER_FQDN.key" "$DOCKER_FQDN.cer" \
     && ISP_OK=1
 check "Key/cert pairs delivered to ISP ($ISP_HOST)" "[ $ISP_OK = 1 ]"
 
@@ -273,7 +285,7 @@ if [ "$ISP_OK" = 1 ]; then
     echo -e "    Certificates are in /root: $WEB_FQDN.key/.cer, $DOCKER_FQDN.key/.cer"
 else
     echo -e "    ${RED}Delivery failed.${NC} Copy them again from this host (HQ-SRV):"
-    echo -e "      cd $CA_DIR && scp $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer $ISP_USER@$ISP_HOST:~/"
+    echo -e "      cd $CA_DIR && tar -cf - $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer | ssh $ISP_USER@$ISP_HOST 'tar -xf - -C ~'"
     echo -e "    If ssh to ISP closes right after the password, check on ISP:"
     echo -e "      grep -i '^PermitRootLogin' /etc/openssh/sshd_config   (must be: yes)"
     echo -e "      journalctl -u sshd -n 20"
@@ -288,7 +300,8 @@ if [ "$HQCLI_OK" = 1 ]; then
 else
     echo -e "    ${RED}Delivery failed.${NC} Find HQ-CLI's address on it with: ip -4 addr"
     echo -e "    then copy the CA certificate from this host (HQ-SRV):"
-    echo -e "      scp -P $HQCLI_PORT $CA_CER $HQCLI_USER@<HQ-CLI address>:~/Документы/"
+    echo -e "      ssh -p $HQCLI_PORT $HQCLI_USER@<HQ-CLI address> 'mkdir -p ~/Документы && cat > ~/Документы/ca.cer' < $CA_CER"
+    echo -e "    (plain scp into ~/Документы/ fails while that folder does not exist yet)"
 fi
 echo -e "    Then run: bash gost-hqcli.sh"
 echo -e "    (hq-cli.sh pre-fetched it into the directory it ran from; if it is not there:"
