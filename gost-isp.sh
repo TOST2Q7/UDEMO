@@ -40,6 +40,9 @@ server {
 
     ssl_certificate     $SSL_DIR/$WEB_FQDN.cer;
     ssl_certificate_key $SSL_DIR/$WEB_FQDN.key;
+    ssl_ciphers GOST2012-GOST8912-GOST8912:HIGH:MEDIUM;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
 
     location / {
         proxy_pass http://$WEB_BACKEND;
@@ -58,6 +61,9 @@ server {
 
     ssl_certificate     $SSL_DIR/$DOCKER_FQDN.cer;
     ssl_certificate_key $SSL_DIR/$DOCKER_FQDN.key;
+    ssl_ciphers GOST2012-GOST8912-GOST8912:HIGH:MEDIUM;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
 
     location / {
         proxy_pass http://$DOCKER_BACKEND;
@@ -99,6 +105,7 @@ check "$WEB_FQDN key/cert copied to $SSL_DIR"  "[ -s \"$SSL_DIR/$WEB_FQDN.key\" 
 check "$DOCKER_FQDN key/cert copied to $SSL_DIR" "[ -s \"$SSL_DIR/$DOCKER_FQDN.key\" ] && [ -s \"$SSL_DIR/$DOCKER_FQDN.cer\" ]"
 check "vhost points at the right $WEB_FQDN files"    "grep -q \"$SSL_DIR/$WEB_FQDN.key\" \"$VHOST\" && grep -q \"$SSL_DIR/$WEB_FQDN.cer\" \"$VHOST\""
 check "vhost points at the right $DOCKER_FQDN files" "grep -q \"$SSL_DIR/$DOCKER_FQDN.key\" \"$VHOST\" && grep -q \"$SSL_DIR/$DOCKER_FQDN.cer\" \"$VHOST\""
+check "vhost uses GOST ciphers for both sites"  "[ \"\$(grep -c 'ssl_ciphers GOST2012-GOST8912-GOST8912:HIGH:MEDIUM;' \"$VHOST\")\" = 2 ]"
 check "nginx config test passes"               'nginx -t'
 check "nginx service active"                   'systemctl is-active --quiet nginx'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
