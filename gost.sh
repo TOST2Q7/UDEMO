@@ -59,12 +59,12 @@ chmod 600 "$WEB_FQDN.key" "$DOCKER_FQDN.key"
 # 3. CSRs, each with its own SAN - without it Chromium-based browsers
 #    reject the certificate even when the CN matches
 openssl req -new -md_gost12_256 -key "$WEB_FQDN.key" \
-    -subj "/C=RU/O=AU-TEAM/CN=$WEB_FQDN" \
+    -subj "/C=RU/O=au-team.irpo/CN=$WEB_FQDN" \
     -addext "subjectAltName=DNS:$WEB_FQDN" \
     -out "$WEB_FQDN.csr"
 
 openssl req -new -md_gost12_256 -key "$DOCKER_FQDN.key" \
-    -subj "/C=RU/O=AU-TEAM/CN=$DOCKER_FQDN" \
+    -subj "/C=RU/O=au-team.irpo/CN=$DOCKER_FQDN" \
     -addext "subjectAltName=DNS:$DOCKER_FQDN" \
     -out "$DOCKER_FQDN.csr"
 
