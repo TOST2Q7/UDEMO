@@ -19,8 +19,6 @@ done
 
 rm -f /etc/samba/smb.conf
 
-rm -f /etc/cache/smb.conf
-
 rm -rf /var/lib/samba
 rm -rf /var/cache/samba
 

@@ -88,16 +88,20 @@ chrony-клиент с сервером `172.16.2.1` (ISP со стороны ф
 ### 6.1. SSH-вход на каждый узел
 
 ```bash
-sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.100.1   # HQ-RTR
-sshpass -p 'P@ssw0rd' ssh -p 2027 net_admin@192.168.0.1     # BR-RTR
-sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.100.2     # HQ-SRV
-sshpass -p 'P@ssw0rd' ssh -p 2027 sshuser@192.168.0.2       # BR-SRV (сам себе)
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.100.1   # HQ-RTR
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.0.1     # BR-RTR
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2     # HQ-SRV
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2       # BR-SRV (сам себе)
 ```
 
 **Зачем.** Ручная, наглядная проверка того, что учётные данные и порт на
 каждом узле верны, **до** того как запускать Ansible. Каждая команда
 открывает интерактивную сессию на узле: убедились, что вход работает, —
 `exit`, и скрипт переходит к следующему.
+
+`-o StrictHostKeyChecking=no` — без него при первом подключении SSH
+спросил бы подтверждение ключа хоста, а `sshpass` на этот вопрос не
+отвечает, и вход бы не состоялся.
 
 Маршрутизаторы опрашиваются по их **LAN-адресам**: из филиала до
 `192.168.100.1` путь идёт через туннель, что одновременно проверяет OSPF.

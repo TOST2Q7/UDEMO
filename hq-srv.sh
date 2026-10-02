@@ -11,7 +11,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 hostnamectl set-hostname hq-srv.au-team.irpo
 
 # Install wget
-apt-get update && apt-get install wget
+apt-get update && apt-get install -y wget
 # Configure DNS
 wget -O "$DIR/dnsmasq.conf" "$(dirname "$RAW_URL")/dnsmasq.conf"
 apt-get install -y dnsmasq
@@ -58,7 +58,7 @@ echo "Configuring RAID"
 mdadm --create --verbose /dev/md0 -l 0 -n 3 /dev/sd[b-d]
 
 # Save configuration
-mdadm --detail -scan > /etc/mdadm.conf
+mdadm --detail --scan > /etc/mdadm.conf
 
 # fdisk work (automatic input of 'n' and 'w')
 echo -e "n\n\n\n\n\nw" | fdisk /dev/md0

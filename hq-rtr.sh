@@ -126,7 +126,7 @@ iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 # Forward 8080 to the site on HQ-SRV (web.sh), ISP's nginx proxies to it
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
 #iptables -t nat -A PREROUTING -p tcp -d 192.168.100.1 --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
-iptables-save >> /etc/sysconfig/iptables
+iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 
 # 1. Create user net_admin (OR ANOTHER USER, IF CHANGED UPDATE THE NAME ETC IN THIS FILE)

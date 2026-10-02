@@ -21,7 +21,7 @@
 
 ```bash
 hostnamectl set-hostname hq-srv.au-team.irpo
-apt-get update && apt-get install wget
+apt-get update && apt-get install -y wget
 ```
 
 `wget` нужен, чтобы скачать `dnsmasq.conf` из репозитория. Без `-y`: если
@@ -149,7 +149,7 @@ systemctl restart sshd
 
 ```bash
 mdadm --create --verbose /dev/md0 -l 0 -n 3 /dev/sd[b-d]
-mdadm --detail -scan > /etc/mdadm.conf
+mdadm --detail --scan > /etc/mdadm.conf
 echo -e "n\n\n\n\n\nw" | fdisk /dev/md0
 mkfs.ext4 /dev/md0p1
 mkdir /raid

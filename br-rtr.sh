@@ -11,7 +11,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 hostnamectl set-hostname br-rtr.au-team.irpo
 
 # Install gpasswd
-apt-get install shadow-groups
+apt-get install -y shadow-groups
 
 # Enable routing
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
@@ -78,7 +78,7 @@ iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
 # Forward 8080 to testapp on BR-SRV (docker.sh), ISP's nginx proxies to it
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
-iptables-save >> /etc/sysconfig/iptables
+iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 
 # 1. Create user net_admin (OR ANOTHER USER, IF CHANGED UPDATE THE NAME ETC IN THIS FILE)
@@ -156,7 +156,7 @@ check "Interface tun0 (GRE) is up"                   'ip addr show tun0'
 check "Address 10.10.10.2/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
-check "Tunnel to ISP responds (10.10.10.1)"         'ping -c 3 -W 1 10.10.10.1'
+check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'

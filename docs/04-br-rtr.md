@@ -22,7 +22,7 @@
 
 ```bash
 hostnamectl set-hostname br-rtr.au-team.irpo
-apt-get install shadow-groups
+apt-get install -y shadow-groups
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 ```
 
@@ -82,7 +82,7 @@ MD5-аутентификацией. После схождения OSPF BR-RTR у
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
-iptables-save >> /etc/sysconfig/iptables
+iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
 
@@ -129,9 +129,8 @@ chrony-клиент с сервером `172.16.2.1` — ближайший к �
 
 Сверх стандартных:
 
-* `Tunnel to ISP responds (10.10.10.1)` — пинг **HQ-RTR** по туннелю.
-  Подпись «to ISP» неточна: `10.10.10.1` — это HQ-RTR, а не ISP (см.
-  [11-notes.md](11-notes.md)).
+* `Tunnel to HQ-RTR responds (10.10.10.1)` — пинг **HQ-RTR** по туннелю
+  (`10.10.10.1` — его конец туннеля).
 * `OSPF route to HQ responds (192.168.100.1)` — самая показательная
   проверка: этот адрес BR-RTR может знать **только** из OSPF. Если она OK —
   туннель, аутентификация и обмен маршрутами работают целиком.
