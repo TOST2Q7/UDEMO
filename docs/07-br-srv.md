@@ -35,7 +35,7 @@
 apt-get update && apt-get install -y ansible sshpass
 mkdir -p /etc/ansible
 cd /etc/ansible
-wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
+wget -O /etc/ansible/inventory.yml "$(dirname "$RAW_URL")/inventory2.yml"
 ```
 
 * **`ansible`** — система управления конфигурацией без агентов: подключается
@@ -45,11 +45,10 @@ wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.
   паролю, а не по ключу). Без `sshpass` Ansible откажется работать с
   паролями.
 * **`/etc/ansible/`** — каталог Ansible по умолчанию.
-* **Инвентарь скачивается из внешнего репозитория** `19zammik86-source/DEMO`,
-  а не из этой ветки. Это значит, что содержимое инвентаря этой веткой **не
-  контролируется** (см. [11-notes.md](11-notes.md)). Файл
-  `inventory2.yml` в этом репозитории — его упрощённый локальный аналог
-  (см. §7 ниже).
+* **Инвентарь берётся из этой же ветки** — файл `inventory2.yml`
+  сохраняется как `/etc/ansible/inventory.yml` (см. §7 ниже). `-O` задаёт
+  имя явно: при повторном запуске `wget` перезапишет файл, а не создаст
+  `inventory.yml.1`.
 
 ## 3. `ansible.cfg`
 
@@ -156,20 +155,29 @@ sed -i "/^ *hq-cli:/,/ansible_host:/ s/ansible_host: .*/ansible_host: $FOUND_IP/
 ## 7. `inventory2.yml`
 
 ```yaml
-all:
+Networking:
   hosts:
-    hq-srv:
-      ansible_host: 192.168.100.2
-      ansible_port: 2027
+    hq-rtr:
+      ansible_host: 192.168.100.1
+      ansible_user: net_admin
       ansible_password: P@ssw0rd
-      ansible_user: sshuser
+      ansible_port: 2027
+    br-rtr: ...
+Servers:
+  hosts:
+    hq-srv: ...
+    br-srv: ...
+Clients:
+  hosts:
     hq-cli:
       ansible_host: 192.168.200.2
       ...
 ```
 
-Инвентарь в YAML-формате: группа `all`, в ней узлы с параметрами
-подключения.
+Инвентарь в YAML-формате: группы `Networking` (маршрутизаторы, вход
+`net_admin`), `Servers` и `Clients` (вход `sshuser`), в них узлы с
+параметрами подключения. Все группы входят в `all`, поэтому
+`ansible -m ping all` проверяет все пять узлов.
 
 | Параметр | Смысл |
 |---|---|
@@ -177,11 +185,9 @@ all:
 | `ansible_port: 2027` | нестандартный порт SSH |
 | `ansible_user` / `ansible_password` | вход по паролю — для этого нужен `sshpass` |
 
-Содержит только `hq-srv` и `hq-cli` — ровно те узлы, на которые нацелен
-`get_hostname.yml`. `br-srv.sh` этот файл **не использует** (он качает
-внешний `inventory.yml`); `inventory2.yml` можно указать явно:
-`ansible-playbook -i inventory2.yml get_hostname.yml`. Адрес HQ-CLI в нём
-зафиксирован как `.2` — при другом адресе его надо поправить.
+`br-srv.sh` скачивает этот файл как `/etc/ansible/inventory.yml` — инвентарь
+по умолчанию из `ansible.cfg`. Адрес HQ-CLI в нём записан как `.2`;
+`br-srv.sh` заменяет его на найденный сканированием (§6.2).
 
 ## 8. `get_hostname.yml` — плейбук сбора сведений
 

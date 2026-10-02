@@ -82,7 +82,8 @@ echo "- Downloading inventory file"
 apt-get update && apt-get install -y ansible sshpass
 mkdir -p /etc/ansible
 cd /etc/ansible
-wget raw.githubusercontent.com/19zammik86-source/DEMO/refs/heads/main/inventory.yml
+# The inventory lives in this repo as inventory2.yml
+wget -O /etc/ansible/inventory.yml "$(dirname "$RAW_URL")/inventory2.yml"
 
 cat > /etc/ansible/ansible.cfg <<EOF
 [defaults]

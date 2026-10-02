@@ -81,7 +81,6 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/'
 
 | Что | Где используется | Откуда берётся |
 |---|---|---|
-| `inventory.yml` | `br-srv.sh` | внешний репозиторий `19zammik86-source/DEMO` — его содержимое этой веткой не контролируется |
 | ISO задания в `/dev/sr0` (`web/index.php`, `web/logo.png`, `web/dump.sql`, `docker/site_latest.tar`, `docker/mariadb_latest.tar`) | `web.sh`, `docker.sh` | подключается к ВМ вручную; без него скрипты предупредят и дальше выдадут FAIL |
 
 ## 7. Интерактивные SSH-входы в конце `br-srv.sh`
