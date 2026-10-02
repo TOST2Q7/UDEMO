@@ -232,6 +232,11 @@ echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 # ===========================================================
 cat > "$DIR/retry" <<RETRYEOF
 #!/bin/bash
+# $NAME left DNS pointing at HQ-SRV (192.168.100.2), which may not answer
+# yet - go back to the public resolver for the download and the rerun
+# (the script switches to HQ-SRV again at its end)
+echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 wget -O "$SELF" "$RAW_URL"
 chmod +x "$SELF"
 exec "$SELF"

@@ -176,6 +176,20 @@ exec "/root/isp.sh"
 **Почему `exec`.** `exec` заменяет процесс `retry` процессом скрипта, не
 оставляя лишний уровень вложенности shell-ов.
 
+**Исключение — HQ-RTR и BR-RTR.** `hq-rtr.sh` и `br-rtr.sh` в конце
+переключают DNS на HQ-SRV (`192.168.100.2`), который может ещё не работать.
+Поэтому их `retry` перед `wget` возвращает публичный DNS:
+
+```bash
+echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+```
+
+Файл в `ifaces/enp7s1` тоже меняется: скрипт по ходу делает
+`systemctl restart network`, и без этого DNS снова стал бы `192.168.100.2`
+посреди `apt-get`. В конце скрипт сам вернёт DNS на HQ-SRV
+([11-notes.md §3](11-notes.md#3-временная-потеря-dns-на-маршрутизаторах)).
+
 ---
 
 ## 4. Файл `delete`
