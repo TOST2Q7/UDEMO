@@ -8,6 +8,46 @@ LOG="$DIR/${NAME%.sh}-check.log"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 # ===========================================================
 
+# ===========================================================
+# Network pre-flight: everything below downloads packages through
+# HQ-RTR, so test the link step by step and stop with a hint
+# ===========================================================
+net_fail() {
+    echo -e "\033[0;31m[NET FAIL] $1\033[0m"; shift
+    for line in "$@"; do echo "  $line"; done
+    echo "  Fix it and run this script again: $SELF"
+    exit 1
+}
+echo "=== Checking the link to HQ-RTR ==="
+ip -br addr
+ip route
+if ! ip -4 addr | grep -q "inet 192.168.100.2/27"; then
+    net_fail "192.168.100.2/27 is not configured on this host" \
+        "Create enp7s1.100 as printed at the end of hq-rtr.sh, then: systemctl restart network"
+elif ! ping -c 2 -W 2 192.168.100.1 &>/dev/null; then
+    net_fail "Gateway 192.168.100.1 (HQ-RTR) does not answer" \
+        "- Proxmox: this NIC must be on the same bridge as HQ-RTR enp7s2 with an EMPTY" \
+        "  VLAN Tag (enp7s1.100 already tags). Tag=100 in Proxmox as well = no link;" \
+        "  either clear the tag, or drop enp7s1.100 and put the address on enp7s1" \
+        "- HQ-RTR: ip -br addr | grep enp7s2.100   -> must show 192.168.100.1/27"
+elif ! ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "; then
+    net_fail "Internet traffic does not go via 192.168.100.1" \
+        "Route in use: $(ip route get 77.88.8.8 2>&1 | head -1)" \
+        "echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1.100/ipv4route" \
+        "rm -f /etc/net/ifaces/enp7s1/ipv4route; systemctl restart network"
+elif ! ping -c 2 -W 2 77.88.8.8 &>/dev/null; then
+    net_fail "Gateway answers, but the internet (77.88.8.8) does not" \
+        "On HQ-RTR:" \
+        "  cat /proc/sys/net/ipv4/ip_forward                 -> must be 1 (sysctl -w net.ipv4.ip_forward=1)" \
+        "  iptables -t nat -S POSTROUTING                    -> -o enp7s1 -j MASQUERADE" \
+        "  ping -c2 -I 192.168.100.1 77.88.8.8               -> must answer"
+elif ! getent hosts raw.githubusercontent.com &>/dev/null; then
+    net_fail "Internet works, but names do not resolve" \
+        "/etc/resolv.conf: $(grep -v '^#' /etc/resolv.conf | tr '\n' ' ')" \
+        "chattr -i /etc/resolv.conf; echo 'nameserver 77.88.8.8' > /etc/resolv.conf"
+fi
+echo -e "\033[0;32m[OK] Gateway, internet and DNS work\033[0m"
+
 hostnamectl set-hostname hq-srv.au-team.irpo
 
 # Install wget
@@ -143,6 +183,10 @@ check() {
 : > "$LOG"
 echo "=== Checking hq-srv configuration ===" | tee -a "$LOG"
 check "Hostname = hq-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
+check "Address 192.168.100.2/27 configured"         'ip -4 addr | grep -q "inet 192.168.100.2/27"'
+check "Default route via HQ-RTR (192.168.100.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "'
+check "Internet reachable (77.88.8.8)"              'ping -c 2 -W 2 77.88.8.8'
+check "Internet names resolve via dnsmasq"          'getent hosts raw.githubusercontent.com'
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
 check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
 check "/etc/dnsmasq.conf copied"                    '[ -s /etc/dnsmasq.conf ]'

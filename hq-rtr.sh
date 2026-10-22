@@ -47,8 +47,11 @@ echo "192.168.100.1/27" > /etc/net/ifaces/enp7s2.100/ipv4address
 echo "192.168.200.1/28" > /etc/net/ifaces/enp7s2.200/ipv4address
 echo "192.168.99.1/29" > /etc/net/ifaces/enp7s2.999/ipv4address
 
-# Enable routing
-sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
+# Enable routing (any spelling of the line, add it if it is missing)
+sed -i 's/^#* *net\.ipv4\.ip_forward *=.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf
+grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf
+# and switch it on right now, not only on the next network restart
+sysctl -w net.ipv4.ip_forward=1
 
 # Restart networking
 systemctl restart network
@@ -161,12 +164,12 @@ systemctl restart chronyd
 chronyc waitsync 15 0 0 2 >/dev/null
 
 # ===========================================================
-# Point DNS at HQ-SRV - done last, everything above still needs
-# the public resolver
+# DNS stays on the public resolver: HQ-SRV is not configured yet.
+# hq-rtr-2.sh switches this router to HQ-SRV (192.168.100.2) after
+# hq-srv.sh has brought up dnsmasq there.
 # ===========================================================
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
-nameserver 192.168.100.2
-search au-team.irpo
+nameserver 77.88.8.8
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
@@ -195,7 +198,10 @@ check() {
 : > "$LOG"
 echo "=== Checking hq-rtr configuration ===" | tee -a "$LOG"
 check "Hostname = hq-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-rtr.au-team.irpo" ]'
-check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding enabled"                       'grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding active now"                    '[ "$(cat /proc/sys/net/ipv4/ip_forward)" = "1" ]'
+check "Internet from this router (77.88.8.8)"       'ping -c 2 -W 2 77.88.8.8'
+check "Internet via NAT from VLAN100 (src .100.1)"  'ping -c 2 -W 2 -I 192.168.100.1 77.88.8.8'
 check "VLAN100 (enp7s2.100) is up"                  'ip addr show enp7s2.100'
 check "Address 192.168.100.1/27 on enp7s2.100"      'ip -4 addr show enp7s2.100 | grep -q "192.168.100.1/27"'
 check "VLAN200 (enp7s2.200) is up"                  'ip addr show enp7s2.200'
@@ -224,7 +230,8 @@ check "chronyd active"                              'systemctl is-active --quiet
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
 check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 77.88.8.8 (HQ-SRV comes later)" 'grep -qx "nameserver 77.88.8.8" /etc/net/ifaces/enp7s1/resolv.conf'
+check "Name resolution works"                       'getent hosts raw.githubusercontent.com'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
@@ -232,9 +239,8 @@ echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 # ===========================================================
 cat > "$DIR/retry" <<RETRYEOF
 #!/bin/bash
-# $NAME left DNS pointing at HQ-SRV (192.168.100.2), which may not answer
-# yet - go back to the public resolver for the download and the rerun
-# (the script switches to HQ-SRV again at its end)
+# hq-rtr-2.sh may have pointed DNS at HQ-SRV (192.168.100.2) - use the
+# public resolver for the download; rerun hq-rtr-2.sh afterwards
 echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 wget -O "$SELF" "$RAW_URL"
@@ -261,7 +267,12 @@ echo -e "${CYAN}============================================================${NC
 echo -e " Run next : ${YELLOW}hq-srv.sh${NC} on the HQ server host"
 echo -e " Segment  : VLAN 100, 192.168.100.0/27"
 echo
+echo -e " Proxmox: the HQ-SRV NIC goes on the same bridge as this router's"
+echo -e " enp7s2 with an EMPTY VLAN Tag field - the tag is added inside the"
+echo -e " VM by enp7s1.100 (Tag=100 in Proxmox too = double tag, no link)."
+echo
 echo -e " Before running it, tag VLAN 100 on that host (enp7s1):"
+echo -e "   rm -f /etc/net/ifaces/enp7s1/ipv4address /etc/net/ifaces/enp7s1/ipv4route"
 echo -e "   mkdir -p /etc/net/ifaces/enp7s1.100"
 echo -e "   cat > /etc/net/ifaces/enp7s1.100/options <<EOF"
 echo -e "   TYPE=vlan"
@@ -273,6 +284,8 @@ echo -e "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1.100/ipv4address"
 echo -e "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1.100/ipv4route"
 echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1.100/resolv.conf"
 echo -e "   systemctl restart network"
+echo -e "   ping -c2 192.168.100.1 && ping -c2 77.88.8.8"
+echo -e " hq-srv.sh checks this link first and stops with a hint if it is down."
 echo -e "${CYAN}============================================================${NC}"
 echo
 

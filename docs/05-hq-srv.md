@@ -17,6 +17,22 @@
 
 ---
 
+## 0. Проверка сети перед началом
+
+Всё, что дальше делает скрипт, качает пакеты через HQ-RTR, поэтому сначала
+он по шагам проверяет канал и при первой же ошибке **останавливается** с
+подсказкой (ничего не настроив):
+
+| Шаг | Что значит FAIL | Что делать |
+|---|---|---|
+| адрес `192.168.100.2/27` есть | не создан `enp7s1.100` | команды из NEXT STEP `hq-rtr.sh`, `systemctl restart network` |
+| пингуется шлюз `192.168.100.1` | кадры не доходят до HQ-RTR | в Proxmox пустой VLAN Tag у карты HQ-SRV (иначе двойной тег); тот же bridge, что у `enp7s2` HQ-RTR; на HQ-RTR есть `enp7s2.100` с `.1/27` |
+| `ip route get 77.88.8.8` идёт `via 192.168.100.1` | нет шлюза или мешает чужой default | `default via 192.168.100.1` в `enp7s1.100/ipv4route`, удалить `enp7s1/ipv4route` |
+| пингуется `77.88.8.8` | шлюз есть, интернета нет — проблема на HQ-RTR | `cat /proc/sys/net/ipv4/ip_forward` = 1, `iptables -t nat -S` содержит MASQUERADE на `enp7s1`, `ping -I 192.168.100.1 77.88.8.8` |
+| разрешается `raw.githubusercontent.com` | интернет есть, DNS нет | `chattr -i /etc/resolv.conf`, `nameserver 77.88.8.8` |
+
+После исправления скрипт просто запускается ещё раз.
+
 ## 1. Имя хоста, wget
 
 ```bash
@@ -247,6 +263,8 @@ cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 | `/raid is mounted` → `mountpoint -q` | именно точка монтирования, а не просто каталог |
 | `Local DNS answers hq-srv.au-team.irpo` → `getent hosts … \| grep "^192.168.100.2 "` | сквозная проверка: resolv.conf → dnsmasq → правильный ответ. `getent` идёт через NSS, как обычные программы |
 | `Local DNS answers moodle/wiki (CNAME)` | CNAME-ы реально разрешаются |
+| `Default route via HQ-RTR` / `Internet reachable` | после всех рестартов сервер по-прежнему выходит в интернет через `192.168.100.1` |
+| `Internet names resolve via dnsmasq` | внешние имена идут через свой dnsmasq (`server=77.88.8.8`), а не только зона `au-team.irpo` |
 
 ## 9. NEXT STEP
 
