@@ -23,18 +23,18 @@ ip -br addr
 ip route
 if ! ip -4 addr | grep -q "inet 192.168.100.2/27"; then
     net_fail "192.168.100.2/27 is not configured on this host" \
-        "Create enp7s1.100 as printed at the end of hq-rtr.sh, then: systemctl restart network"
+        "Put it on enp7s1 as printed at the end of hq-rtr.sh, then: systemctl restart network"
 elif ! ping -c 2 -W 2 192.168.100.1 &>/dev/null; then
     net_fail "Gateway 192.168.100.1 (HQ-RTR) does not answer" \
-        "- Proxmox: this NIC must be on the same bridge as HQ-RTR enp7s2 with an EMPTY" \
-        "  VLAN Tag (enp7s1.100 already tags). Tag=100 in Proxmox as well = no link;" \
-        "  either clear the tag, or drop enp7s1.100 and put the address on enp7s1" \
+        "- Proxmox: this NIC has VLAN Tag=100, HQ-RTR's NIC has no tag, both on the" \
+        "  same VLAN-aware bridge. Tag=100 plus an enp7s1.100 inside the VM = double" \
+        "  tag, no link: rm -rf /etc/net/ifaces/enp7s1.100, address on enp7s1" \
         "- HQ-RTR: ip -br addr | grep enp7s2.100   -> must show 192.168.100.1/27"
 elif ! ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "; then
     net_fail "Internet traffic does not go via 192.168.100.1" \
         "Route in use: $(ip route get 77.88.8.8 2>&1 | head -1)" \
-        "echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1.100/ipv4route" \
-        "rm -f /etc/net/ifaces/enp7s1/ipv4route; systemctl restart network"
+        "echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1/ipv4route" \
+        "systemctl restart network"
 elif ! ping -c 2 -W 2 77.88.8.8 &>/dev/null; then
     net_fail "Gateway answers, but the internet (77.88.8.8) does not" \
         "On HQ-RTR:" \
