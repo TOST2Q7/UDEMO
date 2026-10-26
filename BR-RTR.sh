@@ -16,10 +16,10 @@ apt-get install shadow-groups
 # Настройка маршутизации
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 
-#Создание enp0s8
+#Создание enp7s2 (линк до BR-FW, сеть BR-SRV 192.168.0.0/28 теперь за BR-FW)
 mkdir -p /etc/net/ifaces/enp7s2
 cp -r /etc/net/ifaces/enp7s1/options /etc/net/ifaces/enp7s2/options
-echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
+echo "192.168.1.1/30" > /etc/net/ifaces/enp7s2/ipv4address
 
 
 # Создаем директорию и файлы конфигурации
@@ -60,7 +60,7 @@ systemctl enable --now frr
 vtysh << 'EOF'
 conf
 router ospf
-network 192.168.0.0/28 area 0
+network 192.168.1.0/30 area 0
 network 10.10.10.0/30 area 0
 exit
 int tun0
@@ -129,15 +129,11 @@ echo -e "${RED}br-rtr.sh finish!${NC}"
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
-echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
-echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
-echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
-echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
-echo -e "> vim /ifaces/enp7s1.100/options < "
-echo -e "TYPE=vlan"
-echo -e "VID=100"
-echo -e "BOOTPROTO=static"
-echo -e "HOST=enp7s1"
+echo -e "\033[1;36m=== Next steps \033[30m\033[106mBR-FW.sh\033[0m \033[1;36m==="
+echo -e "> vim /ifaces/enp7s1/ipv4address < 192.168.1.2/30"
+echo -e "> vim /ifaces/enp7s1/ipv4route < default via 192.168.1.1"
+echo -e "> vim /ifaces/enp7s1/resolv.conf < nameserver 77.88.8.8"
+echo -e "> vim /ifaces/enp7s1/options < BOOTPROTO=static"
 echo -e "\033[1;36m=========================================\033[0m"
 
 exec bash
