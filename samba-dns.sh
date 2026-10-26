@@ -17,5 +17,7 @@ set_dns sshuser@192.168.100.2   "/etc/net/ifaces/enp7s1.100/resolv.conf"        
 set_dns net_admin@192.168.100.1 "/etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf" 192.168.100.2
 # BR-RTR
 set_dns net_admin@192.168.1.1   "/etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf" 192.168.100.2
+# BR-FW (с BR-SRV напрямую по LAN-адресу)
+set_dns net_admin@192.168.0.1   "/etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf" 192.168.100.2
 
-echo "DNS 192.168.100.2 прописан на BR-SRV, HQ-RTR, BR-RTR (HQ-SRV - 127.0.0.1)"
+echo "DNS 192.168.100.2 прописан на BR-SRV, HQ-RTR, BR-RTR, BR-FW (HQ-SRV - 127.0.0.1)"
