@@ -3,8 +3,9 @@
 # Переменные
 FILE="./HQ-RTR.sh"
 
-
-
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
 
 
 
@@ -12,8 +13,12 @@ FILE="./HQ-RTR.sh"
 
 hostnamectl set-hostname hq-rtr.au-team.irpo
 
+# Настрока часового пояса
+apt-get update && apt-get install -y chrony tzdata sshpass
+timedatectl set-timezone Asia/Krasnoyarsk
+
 # Установка gpasswd
-apt-get install shadow-groups
+apt-get install -y shadow-groups
 
 #Создание enp7s2
 mkdir -p /etc/net/ifaces/enp7s2
@@ -55,14 +60,14 @@ sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.con
 # Перезапуск сети
 systemctl restart network
 
-# Установка и настройка dnsmasq
+# Установка и настройка dnsmasq (DNS для клиентов сразу HQ-SRV)
 apt-get update && apt-get install -y dnsmasq
 cat > /etc/dnsmasq.conf <<EOF
 no-resolv
 domain=au-team.irpo
 dhcp-range=192.168.200.2,192.168.200.10,999h
 dhcp-option=3,192.168.200.1
-dhcp-option=6,77.88.8.8
+dhcp-option=6,192.168.100.2
 dhcp-option=15,au-team.irpo
 interface=enp7s2.200
 EOF
@@ -120,16 +125,21 @@ exit
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd
+ip ospf network broadcast
+no ip ospf passive
 do wr
 exit
 EOF
+systemctl restart network
+systemctl restart frr
 
 echo "Настройка OSPF завершена!"
 
-#ставим NAT 
+#ставим NAT и проброс портов (8080 -> HQ-SRV:80, 2027 -> HQ-SRV:2027)
 apt-get install iptables -y
-iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE 
-#iptables -t nat -A PREROUTING -p tcp -d 192.168.100.1 --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
+iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 
@@ -150,6 +160,7 @@ sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
 # 6. Перезапуск SSH
+systemctl enable --now sshd
 systemctl restart sshd
 
 
@@ -165,7 +176,7 @@ echo "Готово! Пользователь net_admin создан, SSH нас�
 
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
-echo -e "> vim /ifaces/enp7s1.100/ipv4route < 192.168.100.1"
+echo -e "> vim /ifaces/enp7s1.100/ipv4route < default via 192.168.100.1"
 echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
 echo -e "> vim /ifaces/enp7s1.100/options < "
 echo -e "TYPE=vlan"

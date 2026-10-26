@@ -2,8 +2,14 @@
 
 hostnamectl set-hostname hq-srv.au-team.irpo
 
+# Настрока часового пояса
+apt-get update && apt-get install -y chrony tzdata sshpass
+timedatectl set-timezone Asia/Krasnoyarsk
+systemctl enable --now chronyd
+systemctl restart chronyd
+
 # Установка wget
-apt-get update && apt-get install wget
+apt-get update && apt-get install -y wget
 #Настройка ДНС
 wget raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/main/dnsmasq.conf
 apt-get install -y dnsmasq
@@ -11,7 +17,7 @@ systemctl enable --now dnsmasq
 rm -rf /etc/dnsmasq.conf
 cp -r dnsmasq.conf /etc/
 systemctl restart dnsmasq
-ping HQ-SRV.au-team.irpo
+ping -c 3 hq-srv.au-team.irpo
 
 echo "Настройка SSH"
 
@@ -83,14 +89,13 @@ echo "/raid/nfs 192.168.200.0/28(rw,sync,no_subtree_check)" >> /etc/exports
 systemctl restart nfs
 touch /raid/nfs/test
 
-echo "Готово! RAID 5 и NFS настроены."
+echo "Готово! RAID 0 и NFS настроены."
 
 
 echo "- Настройка RESOLV"
 # Файл /etc/resolv.conf
 cat > /etc/resolv.conf <<EOF
-    nameserver 127.0.0.1
-    search au-team.irpo
-
+nameserver 127.0.0.1
+search au-team.irpo
 EOF
 chattr +i /etc/resolv.conf

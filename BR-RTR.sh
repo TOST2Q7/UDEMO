@@ -10,8 +10,12 @@ FILE="./BR-RTR.sh"
 
 hostnamectl set-hostname br-rtr.au-team.irpo
 
+# Настрока часового пояса
+apt-get update && apt-get install -y chrony tzdata sshpass
+timedatectl set-timezone Asia/Krasnoyarsk
+
 # Установка gpasswd
-apt-get install shadow-groups
+apt-get install -y shadow-groups
 
 # Настройка маршутизации
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
@@ -66,16 +70,20 @@ exit
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd
+ip ospf network broadcast
 do wr
 exit
 EOF
+systemctl restart network
+systemctl restart frr
 
 echo "Настройка OSPF завершена!"
 
-#ставим NAT 
+#ставим NAT и проброс портов (8080 -> BR-SRV:8080, 2027 -> BR-SRV:2027)
 apt-get install iptables -y
-iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE 
-iptables -t nat -A PREROUTING -p tcp -d 192.168.0.1 --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
+iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
 iptables-save >> /etc/sysconfig/iptables
 systemctl enable --now iptables
 
@@ -96,6 +104,7 @@ sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
 # 6. Перезапуск SSH
+systemctl enable --now sshd
 systemctl restart sshd
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
@@ -105,16 +114,20 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# $3 - число попыток (по умолчанию 1)
 check() {
-    if ping -c 3 -W 1 "$2" &> /dev/null; then
-        echo -e "${GREEN}$1: OK${NC}"
-    else
-        echo -e "${RED}$1: FAIL${NC}"
-    fi
+    for i in $(seq 1 "${3:-1}"); do
+        if ping -c 3 -W 1 "$2" &> /dev/null; then
+            echo -e "${GREEN}$1: OK${NC}"
+            return
+        fi
+    done
+    echo -e "${RED}$1: FAIL${NC}"
 }
 
 check "Tunnel" 10.10.10.1
-check "OSPF"   192.168.100.1
+# tun0 в режиме broadcast: соседство OSPF поднимается ~40 сек, поэтому ждём до ~60 сек
+check "OSPF"   192.168.100.1 20
 
 # Удаляем скрипт
 if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then
@@ -125,9 +138,6 @@ fi
 
 
 echo -e "${RED}br-rtr.sh finish!${NC}"
-
-
-echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mBR-FW.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1/ipv4address < 192.168.1.2/30"

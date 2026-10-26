@@ -47,6 +47,8 @@ exit
 do wr
 exit
 EOF
+systemctl restart network
+systemctl restart frr
 
 echo "Настройка OSPF завершена!"
 

@@ -1,7 +1,15 @@
 #!/bin/bash
-apt-get update && apt-get install -y yandex-browser-stable
 
 hostnamectl set-hostname hq-cli.au-team.irpo
+
+# Настрока часового пояса
+apt-get update && apt-get install -y chrony tzdata sshpass
+timedatectl set-timezone Asia/Krasnoyarsk
+systemctl enable --now chronyd
+systemctl restart chronyd
+
+# Установка Яндекс Браузера
+apt-get install -y yandex-browser-stable
 
 # Монтирование RAID 
 mkdir /mnt/nfs
@@ -36,6 +44,7 @@ echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 echo "Authorized access only" > /etc/openssh/banner
 
 # Перезапуск SSH
+systemctl enable --now sshd
 systemctl restart sshd
 
 echo "Настройка завершена:"
