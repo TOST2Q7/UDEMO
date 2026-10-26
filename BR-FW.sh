@@ -91,7 +91,7 @@ systemctl enable --now iptables
 
 echo "Межсетевой экран настроен!"
 
-# 1. Создание пользователя net_admin (нужен для samba-dns.sh) (ЛИБО ДРУГОГО ПОЛЬЗОВАТЕЛЯ, ПРИ СМЕНЕ ПОМЕНЯТЬ В ЭТОМ ФАЙЛЕ ИМЯ И Т.Д)
+# 1. Создание пользователя net_admin (управление BR-FW по SSH) (ЛИБО ДРУГОГО ПОЛЬЗОВАТЕЛЯ, ПРИ СМЕНЕ ПОМЕНЯТЬ В ЭТОМ ФАЙЛЕ ИМЯ И Т.Д)
 useradd -m net_admin
 
 # 2. Установка пароля P@$$word (без подтверждения)
@@ -146,7 +146,10 @@ echo -e "${RED}br-fw.sh finish!${NC}"
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mBR-SRV.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1/ipv4address < 192.168.0.2/28"
 echo -e "> vim /ifaces/enp7s1/ipv4route < default via 192.168.0.1"
-echo -e "> vim /ifaces/enp7s1/resolv.conf < nameserver 77.88.8.8"
+echo -e "> vim /ifaces/enp7s1/resolv.conf < "
+echo -e "nameserver 77.88.8.8"
+echo -e "nameserver 192.168.100.2"
+echo -e "search au-team.irpo"
 echo -e "> vim /ifaces/enp7s1/options < BOOTPROTO=static"
 echo -e "\033[1;36m=========================================\033[0m"
 

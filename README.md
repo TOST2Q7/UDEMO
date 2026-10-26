@@ -9,11 +9,17 @@ bash <скрипт>
 
 ## Порядок запуска
 
-Перед скриптом на машине без сети вручную настроить интерфейс (адрес, шлюз, DNS 77.88.8.8). Что вписать, показывает гайд «Next steps» в конце предыдущего скрипта.
+Перед скриптом на машине без сети вручную настроить интерфейс (адрес, шлюз, resolv.conf). Что вписать, показывает гайд «Next steps» в конце предыдущего скрипта. resolv.conf везде сразу такой:
+
+```
+nameserver 77.88.8.8
+nameserver 192.168.100.2
+search au-team.irpo
+```
 
 | # | Машина | Скрипт |
 |---|--------|--------|
-| 1 | ISP | `isp.sh` |
+| 1 | ISP | `isp.sh` → гайды для HQ-RTR и BR-RTR |
 | 2 | HQ-RTR | `HQ-RTR.sh` → гайд для HQ-SRV |
 | 3 | BR-RTR | `BR-RTR.sh` → гайд для BR-FW |
 | 4 | BR-FW | `BR-FW.sh` (межсетевой экран, net_admin на 2027) → гайд для BR-SRV |
@@ -26,7 +32,6 @@ bash <скрипт>
 | Машина | Скрипт | Что делает |
 |--------|--------|------------|
 | BR-SRV | `samba.sh` | Samba DC, группа hq, hquser1-5, chrony |
-| BR-SRV | `samba-dns.sh` | DNS 192.168.100.2 на BR-SRV, HQ-RTR, BR-RTR, BR-FW по SSH |
 | BR-SRV | `samba-users.sh` | импорт пользователей из Users.csv с диска |
 | BR-SRV | `docker.sh` | docker compose: site + mariadb с диска |
 | HQ-SRV | `web.sh` | LAMP, сайт и база webdb с диска |
