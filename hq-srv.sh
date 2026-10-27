@@ -6,6 +6,11 @@ DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
+
+# VLAN 100 reaches this host one of two ways (hq-rtr.sh asks which):
+# Proxmox tags it and the address sits on enp7s1, or the VM tags it on enp7s1.100
+IFACE="enp7s1"
+[ -d /etc/net/ifaces/enp7s1.100 ] && IFACE="enp7s1.100"
 # ===========================================================
 
 # ===========================================================
@@ -18,22 +23,32 @@ net_fail() {
     echo "  Fix it and run this script again: $SELF"
     exit 1
 }
-echo "=== Checking the link to HQ-RTR ==="
+# What to look at when HQ-RTR does not answer depends on the scenario
+if [ "$IFACE" = "enp7s1.100" ]; then
+    VLAN_HINT=("- Scenario: the VM tags VLAN 100 (enp7s1.100 found)"
+               "- Proxmox: this NIC must have NO VLAN tag - Tag=100 plus enp7s1.100 = double"
+               "  tag, no link. If Proxmox does tag it, switch scenario: on HQ-RTR"
+               "  ./hq-srv-steps proxmox (no enp7s1.100, address on enp7s1)")
+else
+    VLAN_HINT=("- Scenario: Proxmox tags VLAN 100 (no enp7s1.100, address on enp7s1)"
+               "- Proxmox: this NIC needs VLAN Tag=100, HQ-RTR's NIC no tag, both on the"
+               "  same VLAN-aware bridge. If Proxmox does not tag it, switch scenario:"
+               "  on HQ-RTR ./hq-srv-steps manual (enp7s1.100 inside this VM)")
+fi
+echo "=== Checking the link to HQ-RTR (VLAN 100 on $IFACE) ==="
 ip -br addr
 ip route
 if ! ip -4 addr | grep -q "inet 192.168.100.2/27"; then
     net_fail "192.168.100.2/27 is not configured on this host" \
-        "Put it on enp7s1 as printed at the end of hq-rtr.sh, then: systemctl restart network"
+        "Put it on $IFACE as printed at the end of hq-rtr.sh (./hq-srv-steps there), then: systemctl restart network"
 elif ! ping -c 2 -W 2 192.168.100.1 &>/dev/null; then
     net_fail "Gateway 192.168.100.1 (HQ-RTR) does not answer" \
-        "- Proxmox: this NIC has VLAN Tag=100, HQ-RTR's NIC has no tag, both on the" \
-        "  same VLAN-aware bridge. Tag=100 plus an enp7s1.100 inside the VM = double" \
-        "  tag, no link: rm -rf /etc/net/ifaces/enp7s1.100, address on enp7s1" \
+        "${VLAN_HINT[@]}" \
         "- HQ-RTR: ip -br addr | grep enp7s2.100   -> must show 192.168.100.1/27"
 elif ! ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "; then
     net_fail "Internet traffic does not go via 192.168.100.1" \
         "Route in use: $(ip route get 77.88.8.8 2>&1 | head -1)" \
-        "echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1/ipv4route" \
+        "echo 'default via 192.168.100.1' > /etc/net/ifaces/$IFACE/ipv4route" \
         "systemctl restart network"
 elif ! ping -c 2 -W 2 77.88.8.8 &>/dev/null; then
     net_fail "Gateway answers, but the internet (77.88.8.8) does not" \
@@ -164,7 +179,8 @@ cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 127.0.0.1
 search au-team.irpo
 EOF
-# The VLAN 100 sub-interface still holds the temporary 77.88.8.8 from setup
+# Scenario "the VM tags VLAN 100": enp7s1.100 still holds the temporary
+# 77.88.8.8 from setup and is the file etcnet applies
 [ -d /etc/net/ifaces/enp7s1.100 ] && cp /etc/net/ifaces/enp7s1/resolv.conf /etc/net/ifaces/enp7s1.100/resolv.conf
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
@@ -191,11 +207,11 @@ check() {
 }
 
 : > "$LOG"
-echo "=== Checking hq-srv configuration ===" | tee -a "$LOG"
+echo "=== Checking hq-srv configuration (VLAN 100 on $IFACE) ===" | tee -a "$LOG"
 check "Hostname = hq-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
-check "Address 192.168.100.2/27 configured"         'ip -4 addr | grep -q "inet 192.168.100.2/27"'
+check "Address 192.168.100.2/27 on $IFACE"          "ip -4 addr show $IFACE | grep -q 'inet 192.168.100.2/27'"
 check "Default route via HQ-RTR (192.168.100.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "'
 check "Internet reachable (77.88.8.8)"              'ping -c 2 -W 2 77.88.8.8'
 check "Internet names resolve via dnsmasq"          'getent hosts raw.githubusercontent.com'
@@ -225,7 +241,7 @@ check "chronyd active"                              'systemctl is-active --quiet
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
 check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
-check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on $IFACE: 127.0.0.1, search au-team.irpo" "grep -qx 'nameserver 127.0.0.1' /etc/net/ifaces/$IFACE/resolv.conf && grep -qx 'search au-team.irpo' /etc/net/ifaces/$IFACE/resolv.conf"
 check "/etc/resolv.conf uses 127.0.0.1"             'grep -qx "nameserver 127.0.0.1" /etc/resolv.conf'
 check "Local DNS answers hq-srv.au-team.irpo"       'getent hosts hq-srv.au-team.irpo | grep -q "^192.168.100.2 "'
 check "Local DNS answers moodle/wiki (CNAME)"       'getent hosts moodle.au-team.irpo && getent hosts wiki.au-team.irpo'

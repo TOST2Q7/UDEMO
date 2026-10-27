@@ -6,6 +6,12 @@ DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
+
+# How VLAN 100/200 reaches HQ-SRV and HQ-CLI: "proxmox" (their NICs carry a
+# Proxmox VLAN tag) or "manual" (the VMs tag it on enp7s1.100/.200). Empty =
+# ask at the end; "VLAN_MODE=manual ./hq-rtr.sh" skips the question.
+# This router is the same in both: a trunk with enp7s2.100/.200/.999
+VLAN_MODE="${VLAN_MODE:-}"
 # ===========================================================
 
 hostnamectl set-hostname hq-rtr.au-team.irpo
@@ -272,7 +278,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$DIR/hq-srv-steps" "$DIR/vlan-mode" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
@@ -280,25 +286,83 @@ rm -f "$SELF"
 
 echo "Done! User net_admin created, SSH configured on port 2027."
 
+# ===========================================================
+# NEXT STEP depends on how VLAN 100/200 reaches HQ-SRV and HQ-CLI.
+# The steps are saved as ./hq-srv-steps, so a wrong choice is fixed
+# with "./hq-srv-steps manual" or "./hq-srv-steps proxmox"
+# ===========================================================
+cat > "$DIR/hq-srv-steps" <<'STEPSEOF'
+#!/bin/bash
+# Prints how to bring HQ-SRV onto VLAN 100: hq-srv-steps proxmox|manual
+CYAN='\033[1;36m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+LINE="${CYAN}============================================================${NC}"
+
 echo
-echo -e "${CYAN}============================================================${NC}"
+echo -e "$LINE"
 echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
+echo -e "$LINE"
 echo -e " Run next : ${YELLOW}hq-srv.sh${NC} on the HQ server host"
-echo -e " Segment  : VLAN 100, 192.168.100.0/27"
-echo
-echo -e " Proxmox tags VLAN 100 for that host: its NIC has VLAN Tag=100,"
-echo -e " this router's NIC has no tag, the bridge is VLAN aware. Inside"
-echo -e " HQ-SRV the address goes straight on enp7s1, no enp7s1.100:"
-echo -e "   rm -rf /etc/net/ifaces/enp7s1.100"
-echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
-echo -e "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1/ipv4route"
-echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
-echo -e "   systemctl restart network"
-echo -e "   ping -c2 192.168.100.1 && ping -c2 77.88.8.8"
+if [ "$1" = "manual" ]; then
+    echo -e " Segment  : VLAN 100, 192.168.100.0/27 - ${YELLOW}the VM tags it${NC} (enp7s1.100)"
+    echo
+    echo -e " Proxmox: no VLAN tag on the HQ-SRV and HQ-CLI NICs. Inside HQ-SRV:"
+    echo    "   mkdir -p /etc/net/ifaces/enp7s1.100"
+    echo    "   printf '%s\n' TYPE=vlan HOST=enp7s1 VID=100 BOOTPROTO=static > /etc/net/ifaces/enp7s1.100/options"
+    echo    "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+    echo    "   rm -f /etc/net/ifaces/enp7s1/ipv4address /etc/net/ifaces/enp7s1/ipv4route"
+    echo    "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1.100/ipv4address"
+    echo    "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1.100/ipv4route"
+    echo    "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1.100/resolv.conf"
+    echo    "   systemctl restart network"
+    echo    "   ping -c2 192.168.100.1 && ping -c2 77.88.8.8"
+    OTHER="proxmox"
+else
+    echo -e " Segment  : VLAN 100, 192.168.100.0/27 - ${YELLOW}Proxmox tags it${NC}"
+    echo
+    echo -e " Proxmox: the HQ-SRV NIC has VLAN Tag=100 (HQ-CLI's Tag=200), this"
+    echo -e " router's NIC has no tag, the bridge is VLAN aware. Inside HQ-SRV the"
+    echo -e " address goes straight on enp7s1, no enp7s1.100 (that would double-tag):"
+    echo    "   rm -rf /etc/net/ifaces/enp7s1.100"
+    echo    "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+    echo    "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1/ipv4address"
+    echo    "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1/ipv4route"
+    echo    "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
+    echo    "   systemctl restart network"
+    echo    "   ping -c2 192.168.100.1 && ping -c2 77.88.8.8"
+    OTHER="manual"
+fi
 echo -e " hq-srv.sh checks this link first and stops with a hint if it is down."
-echo -e "${CYAN}============================================================${NC}"
+echo -e " Other scenario: ${YELLOW}./hq-srv-steps $OTHER${NC}"
+echo -e "$LINE"
 echo
+STEPSEOF
+chmod +x "$DIR/hq-srv-steps"
+
+# Ask how VLAN 100/200 reaches HQ-SRV and HQ-CLI, unless VLAN_MODE already
+# says so. Enter, or no terminal at all, means proxmox
+choose_vlan_mode() {
+    local ans
+    case "$VLAN_MODE" in proxmox|manual) return ;; esac
+    VLAN_MODE="proxmox"
+    { : </dev/tty; } 2>/dev/null || return
+    echo
+    echo -e "${CYAN} How do HQ-SRV and HQ-CLI get their VLAN (100 / 200)?${NC}"
+    echo -e "   1) Proxmox tags it: their NICs have VLAN Tag=100 / Tag=200 (default)"
+    echo -e "   2) The VMs tag it: no tag on their NICs, enp7s1.100 / enp7s1.200 inside"
+    while true; do
+        read -r -p " Choice [1]: " ans </dev/tty
+        case "$ans" in
+            ""|1) VLAN_MODE="proxmox"; return ;;
+            2)    VLAN_MODE="manual";  return ;;
+        esac
+    done
+}
+choose_vlan_mode
+# hq-rtr-2.sh reads the choice to print the matching HQ-CLI steps
+echo "$VLAN_MODE" > "$DIR/vlan-mode"
+
+"$DIR/hq-srv-steps" "$VLAN_MODE"
 
 exec bash

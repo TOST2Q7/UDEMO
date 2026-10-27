@@ -6,6 +6,11 @@ DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
+
+# VLAN 200 reaches this host one of two ways (hq-rtr-2.sh prints how):
+# Proxmox tags it and DHCP runs on enp7s1, or the VM tags it on enp7s1.200
+IFACE="enp7s1"
+ip link show enp7s1.200 &>/dev/null && IFACE="enp7s1.200"
 # ===========================================================
 
 apt-get update && apt-get install -y yandex-browser-stable
@@ -102,8 +107,10 @@ check() {
 }
 
 : > "$LOG"
-echo "=== Checking hq-cli configuration ===" | tee -a "$LOG"
+echo "=== Checking hq-cli configuration (VLAN 200 on $IFACE) ===" | tee -a "$LOG"
 check "Hostname = hq-cli.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-cli.au-team.irpo" ]'
+check "VLAN 200 address from DHCP on $IFACE"        "ip -4 addr show $IFACE | grep -q 'inet 192.168.200\.'"
+check "Default route via HQ-RTR (192.168.200.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.200.1 "'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
@@ -121,7 +128,6 @@ check "openssh-server installed"                    'rpm -q openssh-server'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
 check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 check "sshpass installed"                           'command -v sshpass'
-check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 check "sshd listens on port 2027"                   'ss -tln | grep -q ":2027 "'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'

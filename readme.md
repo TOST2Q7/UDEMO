@@ -41,3 +41,10 @@ ISP → HQ-RTR, BR-RTR → BR-FW → HQ-SRV → HQ-RTR (hq-rtr-2.sh) → HQ-CLI
 ```
 
 Почему именно так — в [00-overview.md](docs/00-overview.md#3-порядок-запуска-и-почему-он-такой).
+
+**VLAN для HQ-SRV и HQ-CLI — два сценария:** Proxmox ставит тег сам
+(`VLAN Tag = 100/200` у их карт, адрес на `enp7s1`) или ВМ тегирует сама
+(`enp7s1.100` / `enp7s1.200`). `hq-rtr.sh` в конце спрашивает, какой
+сейчас (Enter — Proxmox; без вопроса: `VLAN_MODE=manual ./hq-rtr.sh`), и
+печатает шаги только для него; другой вариант — `./hq-srv-steps manual`
+или `./hq-srv-steps proxmox`. Подробно — [00-overview.md §4.8](docs/00-overview.md#48-как-vlan-100200-доходит-до-hq-srv-и-hq-cli-два-сценария).
