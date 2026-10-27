@@ -91,3 +91,10 @@ $SSH net_admin@192.168.1.1 exit
 ansible -m ping all
 ansible-playbook /etc/ansible/get_hostname.yml
 ls /etc/ansible/PC_INFO
+
+# DNS: HQ-SRV вместо 77.88.8.8, вписанного вручную (samba.sh потом сменит на 127.0.0.1)
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf

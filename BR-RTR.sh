@@ -109,6 +109,13 @@ systemctl restart sshd
 
 echo "Готово! Пользователь net_admin создан, SSH настроен на порт 2027."
 
+# DNS: HQ-SRV вместо 77.88.8.8, вписанного вручную (в конце: интернет скрипту больше не нужен)
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
 #Проверка туннеля и проверка OSPF
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -142,10 +149,7 @@ echo -e "${RED}br-rtr.sh finish!${NC}"
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mBR-FW.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1/ipv4address < 192.168.1.2/30"
 echo -e "> vim /ifaces/enp7s1/ipv4route < default via 192.168.1.1"
-echo -e "> vim /ifaces/enp7s1/resolv.conf < "
-echo -e "nameserver 77.88.8.8"
-echo -e "nameserver 192.168.100.2"
-echo -e "search au-team.irpo"
+echo -e "> vim /ifaces/enp7s1/resolv.conf < nameserver 77.88.8.8"
 echo -e "> vim /ifaces/enp7s1/options < BOOTPROTO=static"
 echo -e "\033[1;36m=========================================\033[0m"
 

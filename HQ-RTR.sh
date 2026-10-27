@@ -163,6 +163,13 @@ sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/ss
 systemctl enable --now sshd
 systemctl restart sshd
 
+# DNS: HQ-SRV вместо 77.88.8.8, вписанного вручную (в конце: интернет скрипту больше не нужен)
+cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
+nameserver 192.168.100.2
+search au-team.irpo
+EOF
+cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
 
 # Удаляем скрипт
 if rm -f "$FILE" 2>/dev/null && [ ! -e "$FILE" ]; then
@@ -177,10 +184,7 @@ echo "Готово! Пользователь net_admin создан, SSH нас�
 echo -e "\033[1;36m=== Next steps \033[30m\033[106mHQ-SRV.sh\033[0m \033[1;36m==="
 echo -e "> vim /ifaces/enp7s1.100/ipv4address < 192.168.100.2/27"
 echo -e "> vim /ifaces/enp7s1.100/ipv4route < default via 192.168.100.1"
-echo -e "> vim /ifaces/enp7s1.100/resolv.conf < "
-echo -e "nameserver 77.88.8.8"
-echo -e "nameserver 192.168.100.2"
-echo -e "search au-team.irpo"
+echo -e "> vim /ifaces/enp7s1.100/resolv.conf < nameserver 77.88.8.8"
 echo -e "> vim /ifaces/enp7s1.100/options < "
 echo -e "TYPE=vlan"
 echo -e "VID=100"
