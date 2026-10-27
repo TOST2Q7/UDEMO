@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 # ===========================================================
 
@@ -218,26 +220,33 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}br-fw.sh${NC} on the branch firewall host"
-echo -e " Segment  : 192.168.1.0/30 (link BR-RTR - BR-FW)"
-echo
-echo -e " Before running it, set a static address on that host (enp7s1):"
-echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
-echo -e "   echo 192.168.1.2/30 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "   echo 'default via 192.168.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
-echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
-echo -e "   systemctl restart network"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " Run next : ${YELLOW}br-fw.sh${NC} on the branch firewall host"
+    echo -e " Segment  : 192.168.1.0/30 (link BR-RTR - BR-FW)"
+    echo
+    echo -e " Before running it, set a static address on that host (enp7s1):"
+    echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+    echo -e "   echo 192.168.1.2/30 > /etc/net/ifaces/enp7s1/ipv4address"
+    echo -e "   echo 'default via 192.168.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
+    echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
+    echo -e "   systemctl restart network"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

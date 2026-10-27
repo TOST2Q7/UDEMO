@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # Runs on HQ-SRV: CUPS print server with the cups-pdf virtual printer,
@@ -67,20 +69,27 @@ cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
 # (CUPS and its printers stay)
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " The print server is up. ${YELLOW}lpstat -p${NC} here shows the printer name;"
-echo -e " on HQ-CLI add it as:"
-echo -e "   ipp://hq-srv.au-team.irpo:631/printers/<name>"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " The print server is up. ${YELLOW}lpstat -p${NC} here shows the printer name;"
+    echo -e " on HQ-CLI add it as:"
+    echo -e "   ipp://hq-srv.au-team.irpo:631/printers/<name>"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

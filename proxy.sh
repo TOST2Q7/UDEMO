@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # Runs on ISP. Plain-HTTP reverse proxy; gost-isp.sh later rewrites
@@ -116,23 +118,30 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " The HTTP reverse proxy is up:"
-echo -e "   http://$WEB_FQDN    -> $WEB_BACKEND (login $AUTH_USER / $AUTH_PASS)"
-echo -e "   http://$DOCKER_FQDN -> $DOCKER_BACKEND"
-echo -e " A 502 on either means its backend is not up yet (web.sh / docker.sh)."
-echo -e " For HTTPS: ${YELLOW}gost.sh${NC} on HQ-SRV, then ${YELLOW}gost-isp.sh${NC} here"
-echo -e " (pre-fetched by isp.sh), then ${YELLOW}gost-hqcli.sh${NC} on HQ-CLI."
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " The HTTP reverse proxy is up:"
+    echo -e "   http://$WEB_FQDN    -> $WEB_BACKEND (login $AUTH_USER / $AUTH_PASS)"
+    echo -e "   http://$DOCKER_FQDN -> $DOCKER_BACKEND"
+    echo -e " A 502 on either means its backend is not up yet (web.sh / docker.sh)."
+    echo -e " For HTTPS: ${YELLOW}gost.sh${NC} on HQ-SRV, then ${YELLOW}gost-isp.sh${NC} here"
+    echo -e " (pre-fetched by isp.sh), then ${YELLOW}gost-hqcli.sh${NC} on HQ-CLI."
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

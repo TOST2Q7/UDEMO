@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # How VLAN 200 reaches HQ-CLI: "proxmox" or "manual". By default the answer
@@ -73,7 +75,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$DIR/hq-cli-steps" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$DIR/hq-cli-steps" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
@@ -148,3 +150,6 @@ choose_vlan_mode() {
 choose_vlan_mode
 
 "$DIR/hq-cli-steps" "$VLAN_MODE"
+# Same text without colours, for later: cat <script>-next-step.txt
+"$DIR/hq-cli-steps" "$VLAN_MODE" | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"

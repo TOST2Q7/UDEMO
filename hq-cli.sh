@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 
 # VLAN 200 reaches this host one of two ways (hq-rtr-2.sh prints how):
@@ -157,20 +159,27 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/gost-hqcli.sh" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/gost-hqcli.sh" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " This is the last host on the HQ client branch."
-echo -e " Nothing else to configure here for now."
-echo -e " (gost-hqcli.sh was pre-fetched into this directory - run it much"
-echo -e "  later, once gost.sh on HQ-SRV has delivered the CA certificate"
-echo -e "  here)"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " This is the last host on the HQ client branch."
+    echo -e " Nothing else to configure here for now."
+    echo -e " (gost-hqcli.sh was pre-fetched into this directory - run it much"
+    echo -e "  later, once gost.sh on HQ-SRV has delivered the CA certificate"
+    echo -e "  here)"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"

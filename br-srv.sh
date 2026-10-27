@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 # ===========================================================
 
@@ -135,15 +137,22 @@ check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 
 check "Time synced from ISP (172.16.2.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.2.1 "'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for au-team.irpo."
-echo -e " Then, also on this host: ${YELLOW}docker.sh${NC} (testapp + MariaDB from the exam ISO)."
-echo -e " Use /etc/ansible/inventory.yml here to manage the lab with Ansible."
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for au-team.irpo."
+    echo -e " Then, also on this host: ${YELLOW}docker.sh${NC} (testapp + MariaDB from the exam ISO)."
+    echo -e " Use /etc/ansible/inventory.yml here to manage the lab with Ansible."
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 # ===========================================================
 # Create retry/delete helper files, then remove this script
@@ -159,7 +168,7 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 

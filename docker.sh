@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # Runs on BR-SRV. ISP proxies docker.au-team.irpo to BR-RTR:8080,
@@ -137,25 +139,32 @@ cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
 # (the containers and $COMPOSE_DIR stay)
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " testapp is up on this host, port $APP_PORT."
-echo -e " BR-RTR forwards 172.16.2.2:$APP_PORT here. Once ${YELLOW}web.sh${NC} has run"
-echo -e " on HQ-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
-echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
-echo -e " if it is not there:"
-echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
-echo -e " Manage the stack with:"
-echo -e "   docker compose -f $COMPOSE_DIR/compose.yaml ps|logs|restart"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " testapp is up on this host, port $APP_PORT."
+    echo -e " BR-RTR forwards 172.16.2.2:$APP_PORT here. Once ${YELLOW}web.sh${NC} has run"
+    echo -e " on HQ-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
+    echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
+    echo -e " if it is not there:"
+    echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
+    echo -e " Manage the stack with:"
+    echo -e "   docker compose -f $COMPOSE_DIR/compose.yaml ps|logs|restart"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

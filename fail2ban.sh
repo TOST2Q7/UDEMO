@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # Runs on HQ-SRV: fail2ban guards SSH on 2027 - 3 failed logins within
@@ -94,22 +96,29 @@ cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
 # (fail2ban and its jail.conf changes stay)
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " fail2ban guards SSH on port $SSH_PORT. To see it work, from another"
-echo -e " host enter a wrong password 3 times:"
-echo -e "   ssh -p $SSH_PORT sshuser@192.168.100.2"
-echo -e " then here: ${YELLOW}fail2ban-client status sshd${NC} lists the banned address"
-echo -e " for 1 minute."
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " fail2ban guards SSH on port $SSH_PORT. To see it work, from another"
+    echo -e " host enter a wrong password 3 times:"
+    echo -e "   ssh -p $SSH_PORT sshuser@192.168.100.2"
+    echo -e " then here: ${YELLOW}fail2ban-client status sshd${NC} lists the banned address"
+    echo -e " for 1 minute."
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

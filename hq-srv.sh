@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # VLAN 100 reaches this host one of two ways (hq-rtr.sh asks which):
@@ -261,31 +263,38 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
-rm -f "$LOG" "$DIR/dnsmasq.conf" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/dnsmasq.conf" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}hq-rtr-2.sh${NC} on the HQ router"
-echo -e " Reason   : switches the DHCP-advertised DNS server from the"
-echo -e "            public resolver (77.88.8.8) to this host"
-echo -e "            (192.168.100.2), now that dnsmasq here is serving"
-echo -e "            the au-team.irpo zone."
-echo
-echo -e " Later     : ${YELLOW}samba.sh${NC} goes on BR-SRV (the domain controller),"
-echo -e "             after br-srv.sh. This host already forwards au-team.irpo"
-echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
-echo -e "             and the DC forwards everything else back here."
-echo
-echo -e " Also      : ${YELLOW}web.sh${NC} on this host (the site + MariaDB from the"
-echo -e "             exam ISO - attach it as /dev/sr0 first):"
-echo -e "   wget -O web.sh $(dirname "$RAW_URL")/web.sh && bash web.sh"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " Run next : ${YELLOW}hq-rtr-2.sh${NC} on the HQ router"
+    echo -e " Reason   : switches the DHCP-advertised DNS server from the"
+    echo -e "            public resolver (77.88.8.8) to this host"
+    echo -e "            (192.168.100.2), now that dnsmasq here is serving"
+    echo -e "            the au-team.irpo zone."
+    echo
+    echo -e " Later     : ${YELLOW}samba.sh${NC} goes on BR-SRV (the domain controller),"
+    echo -e "             after br-srv.sh. This host already forwards au-team.irpo"
+    echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
+    echo -e "             and the DC forwards everything else back here."
+    echo
+    echo -e " Also      : ${YELLOW}web.sh${NC} on this host (the site + MariaDB from the"
+    echo -e "             exam ISO - attach it as /dev/sr0 first):"
+    echo -e "   wget -O web.sh $(dirname "$RAW_URL")/web.sh && bash web.sh"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash

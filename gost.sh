@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 CA_DIR="$DIR/gost-ca"
@@ -269,42 +271,49 @@ chmod +x "$DIR/retry"
 cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory, including the CA
-rm -rf "$LOG" "$CA_DIR" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -rf "$LOG" "$NEXT" "$CA_DIR" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo
-echo -e " 1) ${YELLOW}ISP${NC} ($ISP_HOST), as root"
-if [ "$ISP_OK" = 1 ]; then
-    echo -e "    Certificates are in /root: $WEB_FQDN.key/.cer, $DOCKER_FQDN.key/.cer"
-else
-    echo -e "    ${RED}Delivery failed.${NC} Copy them again from this host (HQ-SRV):"
-    echo -e "      cd $CA_DIR && tar -cf - $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer | ssh $ISP_USER@$ISP_HOST 'tar -xf - -C ~'"
-    echo -e "    If ssh to ISP closes right after the password, check on ISP:"
-    echo -e "      grep -i '^PermitRootLogin' /etc/openssh/sshd_config   (must be: yes)"
-    echo -e "      journalctl -u sshd -n 20"
-fi
-echo -e "    Then run: bash gost-isp.sh"
-echo -e "    (isp.sh pre-fetched it into the directory it ran from; if it is not there:"
-echo -e "     wget -O gost-isp.sh $(dirname "$RAW_URL")/gost-isp.sh)"
-echo
-echo -e " 2) ${YELLOW}HQ-CLI${NC} (${HQCLI_HOST:-address unknown}), as root"
-if [ "$HQCLI_OK" = 1 ]; then
-    echo -e "    CA certificate is in $HQCLI_CA_PATH"
-else
-    echo -e "    ${RED}Delivery failed.${NC} Find HQ-CLI's address on it with: ip -4 addr"
-    echo -e "    then copy the CA certificate from this host (HQ-SRV):"
-    echo -e "      ssh -p $HQCLI_PORT $HQCLI_USER@<HQ-CLI address> 'mkdir -p ~/Документы && cat > ~/Документы/ca.cer' < $CA_CER"
-    echo -e "    (plain scp into ~/Документы/ fails while that folder does not exist yet)"
-fi
-echo -e "    Then run: bash gost-hqcli.sh"
-echo -e "    (hq-cli.sh pre-fetched it into the directory it ran from; if it is not there:"
-echo -e "     wget -O gost-hqcli.sh $(dirname "$RAW_URL")/gost-hqcli.sh)"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+    echo -e " 1) ${YELLOW}ISP${NC} ($ISP_HOST), as root"
+    if [ "$ISP_OK" = 1 ]; then
+        echo -e "    Certificates are in /root: $WEB_FQDN.key/.cer, $DOCKER_FQDN.key/.cer"
+    else
+        echo -e "    ${RED}Delivery failed.${NC} Copy them again from this host (HQ-SRV):"
+        echo -e "      cd $CA_DIR && tar -cf - $WEB_FQDN.key $WEB_FQDN.cer $DOCKER_FQDN.key $DOCKER_FQDN.cer | ssh $ISP_USER@$ISP_HOST 'tar -xf - -C ~'"
+        echo -e "    If ssh to ISP closes right after the password, check on ISP:"
+        echo -e "      grep -i '^PermitRootLogin' /etc/openssh/sshd_config   (must be: yes)"
+        echo -e "      journalctl -u sshd -n 20"
+    fi
+    echo -e "    Then run: bash gost-isp.sh"
+    echo -e "    (isp.sh pre-fetched it into the directory it ran from; if it is not there:"
+    echo -e "     wget -O gost-isp.sh $(dirname "$RAW_URL")/gost-isp.sh)"
+    echo
+    echo -e " 2) ${YELLOW}HQ-CLI${NC} (${HQCLI_HOST:-address unknown}), as root"
+    if [ "$HQCLI_OK" = 1 ]; then
+        echo -e "    CA certificate is in $HQCLI_CA_PATH"
+    else
+        echo -e "    ${RED}Delivery failed.${NC} Find HQ-CLI's address on it with: ip -4 addr"
+        echo -e "    then copy the CA certificate from this host (HQ-SRV):"
+        echo -e "      ssh -p $HQCLI_PORT $HQCLI_USER@<HQ-CLI address> 'mkdir -p ~/Документы && cat > ~/Документы/ca.cer' < $CA_CER"
+        echo -e "    (plain scp into ~/Документы/ fails while that folder does not exist yet)"
+    fi
+    echo -e "    Then run: bash gost-hqcli.sh"
+    echo -e "    (hq-cli.sh pre-fetched it into the directory it ran from; if it is not there:"
+    echo -e "     wget -O gost-hqcli.sh $(dirname "$RAW_URL")/gost-hqcli.sh)"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"

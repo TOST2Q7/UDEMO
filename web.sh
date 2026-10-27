@@ -5,6 +5,8 @@ SELF="$(readlink -f "$0")"
 DIR="$(dirname "$SELF")"
 NAME="$(basename "$SELF")"
 LOG="$DIR/${NAME%.sh}-check.log"
+# NEXT STEP banner is also saved here: cat it to see the steps again
+NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
 # Runs on HQ-SRV. ISP proxies web.au-team.irpo to HQ-RTR:8080,
@@ -107,23 +109,30 @@ cat > "$DIR/delete" <<DELEOF
 #!/bin/bash
 # Removes everything created by $NAME in this directory
 # (the site in $WEB_ROOT and the $DB_NAME database stay)
-rm -f "$LOG" "$DIR/retry" "$DIR/delete" "$SELF"
+rm -f "$LOG" "$NEXT" "$DIR/retry" "$DIR/delete" "$SELF"
 DELEOF
 chmod +x "$DIR/delete"
 
 rm -f "$SELF"
 
-echo
-echo -e "${CYAN}============================================================${NC}"
-echo -e "${CYAN} NEXT STEP${NC}"
-echo -e "${CYAN}============================================================${NC}"
-echo -e " The site is up on this host, port 80."
-echo -e " HQ-RTR forwards 172.16.1.2:8080 here. Once ${YELLOW}docker.sh${NC} has run"
-echo -e " on BR-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
-echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
-echo -e " if it is not there:"
-echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
-echo -e "${CYAN}============================================================${NC}"
-echo
+# NEXT STEP banner: shown here and saved without colours to $NEXT
+next_step() {
+    echo
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e "${CYAN} NEXT STEP${NC}"
+    echo -e "${CYAN}============================================================${NC}"
+    echo -e " The site is up on this host, port 80."
+    echo -e " HQ-RTR forwards 172.16.1.2:8080 here. Once ${YELLOW}docker.sh${NC} has run"
+    echo -e " on BR-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
+    echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
+    echo -e " if it is not there:"
+    echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
+    echo -e "${CYAN}============================================================${NC}"
+    echo
+}
+next_step
+# Same text without colours, for later: cat <script>-next-step.txt
+next_step | sed 's/\x1b\[[0-9;]*m//g' > "$NEXT"
+echo -e " ${CYAN}(saved: cat $(basename "$NEXT"))${NC}"
 
 exec bash
