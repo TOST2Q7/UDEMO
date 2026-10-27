@@ -77,4 +77,6 @@ echo -e "> vim /ifaces/enp7s1/resolv.conf < nameserver 77.88.8.8"
 echo -e "> vim /ifaces/enp7s1/options < BOOTPROTO=static"
 echo -e "\033[1;36m=========================================\033[0m"
 
+echo -e "\033[1;33m! HQ-RTR.sh, BR-RTR.sh, BR-FW.sh в конце ставят DNS 192.168.100.2: имена на них не работают, пока не выполнен HQ-SRV.sh (нужен интернет раньше - временно верни nameserver 77.88.8.8 в /etc/resolv.conf)\033[0m"
+
 exec bash
