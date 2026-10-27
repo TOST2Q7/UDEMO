@@ -34,7 +34,8 @@ echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 # Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Restart SSH
+# Start SSH at boot and restart it
+systemctl enable --now sshd
 systemctl restart sshd
 
 echo "Configuration complete:"
@@ -77,6 +78,7 @@ check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuse
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 
 echo "- Downloading inventory file"
 apt-get update && apt-get install -y ansible sshpass
@@ -91,6 +93,12 @@ interpreter_python = /usr/bin/python3
 inventory = /etc/ansible/inventory.yml
 host_key_checking = false
 EOF
+
+# ===========================================================
+# Time zone (Alt JeOS can ship without the time zone database)
+# ===========================================================
+apt-get install -y tzdata
+timedatectl set-timezone Asia/Krasnoyarsk || ln -sf /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
 
 # ===========================================================
 # NTP client: sync time from the chrony server on ISP
@@ -119,6 +127,8 @@ check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'
 check "ansible.cfg configured"                      'grep -qx "inventory = /etc/ansible/inventory.yml" /etc/ansible/ansible.cfg && grep -qx "host_key_checking = false" /etc/ansible/ansible.cfg'
+check "tzdata installed"                            'rpm -q tzdata'
+check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 iburst" /etc/chrony.conf'
@@ -159,7 +169,7 @@ rm -f "$SELF"
 apt-get install sshpass -y
 
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.100.1
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.0.1
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.1.1
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2
 

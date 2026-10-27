@@ -84,8 +84,12 @@ echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 # Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Restart SSH
+# Start SSH at boot and restart it
+systemctl enable --now sshd
 systemctl restart sshd
+
+# sshpass: type the lab password for ssh/scp from this host without a prompt
+apt-get install -y sshpass
 
 echo "Configuration complete:"
 echo "- User: sshuser (password: P@ssw0rd)"
@@ -130,6 +134,12 @@ systemctl restart nfs
 touch /raid/nfs/test
 
 echo "Done! RAID and NFS configured."
+
+# ===========================================================
+# Time zone (Alt JeOS can ship without the time zone database)
+# ===========================================================
+apt-get install -y tzdata
+timedatectl set-timezone Asia/Krasnoyarsk || ln -sf /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
 
 # ===========================================================
 # NTP client: sync time from the chrony server on ISP
@@ -183,6 +193,8 @@ check() {
 : > "$LOG"
 echo "=== Checking hq-srv configuration ===" | tee -a "$LOG"
 check "Hostname = hq-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
+check "tzdata installed"                            'rpm -q tzdata'
+check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "Address 192.168.100.2/27 configured"         'ip -4 addr | grep -q "inet 192.168.100.2/27"'
 check "Default route via HQ-RTR (192.168.100.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "'
 check "Internet reachable (77.88.8.8)"              'ping -c 2 -W 2 77.88.8.8'
@@ -199,6 +211,8 @@ check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuse
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
+check "sshpass installed"                           'command -v sshpass'
 check "RAID array /dev/md0 exists"                  'grep -q "^md0 :" /proc/mdstat'
 check "/etc/mdadm.conf saved"                       '[ -s /etc/mdadm.conf ]'
 check "/raid is mounted"                            'mountpoint -q /raid'

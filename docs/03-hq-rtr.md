@@ -211,6 +211,8 @@ exit
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd
+ip ospf network broadcast
+no ip ospf passive
 do wr
 exit
 EOF
@@ -229,6 +231,8 @@ heredoc, как если бы их набирали руками. `'EOF'` в к�
 | `int tun0` | настройки конкретного интерфейса |
 | `ip ospf authentication message-digest` | требовать MD5-аутентификацию OSPF-пакетов на туннеле |
 | `ip ospf message-digest-key 1 md5 P@ssw0rd` | ключ №1 и пароль. На BR-RTR должен быть **идентичен**, иначе соседство не поднимется |
+| `ip ospf network broadcast` | тип сети OSPF на туннеле — broadcast, как и на BR-RTR (типы на концах должны совпадать). Соседство поднимается после выборов DR, примерно через 40 с |
+| `no ip ospf passive` | явно разрешить Hello на `tun0`: через этот интерфейс и устанавливается соседство с филиалом |
 | `do wr` | `write memory` — сохранить текущую конфигурацию в `/etc/frr/frr.conf`, иначе она пропадёт при рестарте FRR |
 
 **Почему аутентификация только на `tun0`.** Туннель идёт через «чужую»
@@ -246,7 +250,7 @@ OSPF-сосед, способный подсунуть ложные маршру
 ```bash
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
-#iptables -t nat -A PREROUTING -p tcp -d 192.168.100.1 --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
@@ -269,10 +273,12 @@ systemctl enable --now iptables
 почему важен `-i enp7s1` — в [04-br-rtr.md §6](04-br-rtr.md#6-nat-и-проброс-портов);
 общая схема веб-сервисов — в [09-web-services.md](09-web-services.md).
 
-Закомментированная строка DNAT — заготовка проброса SSH (порт 2027) на
-HQ-SRV. Оставлена выключенной: в варианте из BR-RTR (см.
-[04-br-rtr.md](04-br-rtr.md#6-nat-и-проброс-портов)) выяснилось, что
-правило с `-d <LAN-адрес роутера>` перехватывает SSH к самому роутеру.
+**Проброс SSH `2027 → 192.168.100.2:2027`.** Раньше эта строка была
+закомментирована: в варианте с `-d <LAN-адрес роутера>` правило
+перехватывало SSH к самому роутеру. Сейчас оно, как на BR-RTR, привязано к
+входному WAN-интерфейсу (`-i enp7s1`): снаружи порт 2027 ведёт на HQ-SRV,
+а изнутри и через туннель — на сам HQ-RTR (см.
+[04-br-rtr.md](04-br-rtr.md#6-nat-и-проброс-портов)).
 
 ### 1.9. Пользователь `net_admin`
 

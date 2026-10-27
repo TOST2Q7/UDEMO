@@ -11,6 +11,12 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 apt-get update && apt-get install -y yandex-browser-stable
 
 # ===========================================================
+# Time zone (Alt JeOS can ship without the time zone database)
+# ===========================================================
+apt-get install -y tzdata
+timedatectl set-timezone Asia/Krasnoyarsk || ln -sf /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
+
+# ===========================================================
 # NTP client: sync time from the chrony server on ISP
 # ===========================================================
 apt-get install -y chrony
@@ -65,6 +71,9 @@ echo "Authorized access only" > /etc/openssh/banner
 # Restart SSH so it listens on 2027
 systemctl restart sshd
 
+# sshpass: type the lab password for ssh/scp from this host without a prompt
+apt-get install -y sshpass
+
 echo "Configuration complete:"
 echo "- User: sshuser (password: P@ssw0rd)"
 echo "- SSH port: 2027"
@@ -95,6 +104,8 @@ check() {
 : > "$LOG"
 echo "=== Checking hq-cli configuration ===" | tee -a "$LOG"
 check "Hostname = hq-cli.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-cli.au-team.irpo" ]'
+check "tzdata installed"                            'rpm -q tzdata'
+check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
 check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
 check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid/nfs /mnt/nfs nfs" /etc/fstab'
@@ -108,6 +119,8 @@ check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "openssh-server installed"                    'rpm -q openssh-server'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
+check "sshpass installed"                           'command -v sshpass'
 check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 check "sshd listens on port 2027"                   'ss -tln | grep -q ":2027 "'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'

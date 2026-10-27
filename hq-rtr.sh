@@ -117,6 +117,8 @@ exit
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd
+ip ospf network broadcast
+no ip ospf passive
 do wr
 exit
 EOF
@@ -128,7 +130,9 @@ apt-get install iptables -y
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 # Forward 8080 to the site on HQ-SRV (web.sh), ISP's nginx proxies to it
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
-#iptables -t nat -A PREROUTING -p tcp -d 192.168.100.1 --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
+# Forward SSH (2027) arriving from outside (WAN) to HQ-SRV; matching the
+# LAN address instead would hijack SSH to this router itself
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 
@@ -148,8 +152,18 @@ echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
-# 6. Restart SSH
+# 6. Start SSH at boot and restart it
+systemctl enable --now sshd
 systemctl restart sshd
+
+# sshpass: type the lab password for ssh/scp from this host without a prompt
+apt-get install -y sshpass
+
+# ===========================================================
+# Time zone (Alt JeOS can ship without the time zone database)
+# ===========================================================
+apt-get install -y tzdata
+timedatectl set-timezone Asia/Krasnoyarsk || ln -sf /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
 
 # ===========================================================
 # NTP client: sync time from the chrony server on ISP
@@ -198,6 +212,8 @@ check() {
 : > "$LOG"
 echo "=== Checking hq-rtr configuration ===" | tee -a "$LOG"
 check "Hostname = hq-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-rtr.au-team.irpo" ]'
+check "tzdata installed"                            'rpm -q tzdata'
+check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
 check "IP forwarding active now"                    '[ "$(cat /proc/sys/net/ipv4/ip_forward)" = "1" ]'
 check "Internet from this router (77.88.8.8)"       'ping -c 2 -W 2 77.88.8.8'
@@ -215,10 +231,12 @@ check "Interface tun0 (GRE) is up"                  'ip addr show tun0'
 check "Address 10.10.10.1/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.1/30"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
+check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'
 check "Tunnel to branch responds (10.10.10.2)"      'ping -c 3 -W 1 10.10.10.2'
 check "HQ-SRV reachable (192.168.100.2)"            'ping -c 3 -W 1 192.168.100.2'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "Site DNAT (8080 -> HQ-SRV:80) configured"    'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80'
+check "SSH DNAT (2027 -> HQ-SRV:2027) configured"   'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.100.2:2027'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "User net_admin exists"                       'id net_admin'
 check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'
@@ -226,6 +244,8 @@ check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL
 check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
+check "sshpass installed"                           'command -v sshpass'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'

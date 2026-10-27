@@ -16,10 +16,11 @@ apt-get install -y shadow-groups
 # Enable routing
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 
-# Create enp7s2
+# Create enp7s2: the /30 link to BR-FW. The branch LAN 192.168.0.0/28
+# sits behind BR-FW now, which owns its gateway 192.168.0.1
 mkdir -p /etc/net/ifaces/enp7s2
 cp -r /etc/net/ifaces/enp7s1/options /etc/net/ifaces/enp7s2/options
-echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
+echo "192.168.1.1/30" > /etc/net/ifaces/enp7s2/ipv4address
 
 # Create tunnel directory and config files
 mkdir -p /etc/net/ifaces/tun0
@@ -58,12 +59,13 @@ systemctl enable --now frr
 vtysh << 'EOF'
 conf
 router ospf
-network 192.168.0.0/28 area 0
+network 192.168.1.0/30 area 0
 network 10.10.10.0/30 area 0
 exit
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd
+ip ospf network broadcast
 do wr
 exit
 EOF
@@ -97,10 +99,20 @@ echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
-# 6. Restart SSH
+# 6. Start SSH at boot and restart it
+systemctl enable --now sshd
 systemctl restart sshd
 
+# sshpass: type the lab password for ssh/scp from this host without a prompt
+apt-get install -y sshpass
+
 echo "Done! User net_admin created, SSH configured on port 2027."
+
+# ===========================================================
+# Time zone (Alt JeOS can ship without the time zone database)
+# ===========================================================
+apt-get install -y tzdata
+timedatectl set-timezone Asia/Krasnoyarsk || ln -sf /usr/share/zoneinfo/Asia/Krasnoyarsk /etc/localtime
 
 # ===========================================================
 # NTP client: sync time from the chrony server on ISP
@@ -123,6 +135,13 @@ nameserver 192.168.100.2
 search au-team.irpo
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
+
+# tun0 is an OSPF broadcast network: the adjacency with HQ-RTR waits for
+# the DR election (~40 s). Give it up to ~60 s so the route check sees it
+for i in $(seq 30); do
+    ping -c 1 -W 1 192.168.100.1 &>/dev/null && break
+    sleep 1
+done
 
 # ===========================================================
 # Final check of everything this script configured
@@ -149,13 +168,16 @@ check() {
 : > "$LOG"
 echo "=== Checking br-rtr configuration ===" | tee -a "$LOG"
 check "Hostname = br-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "br-rtr.au-team.irpo" ]'
+check "tzdata installed"                            'rpm -q tzdata'
+check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
-check "Address 192.168.0.1/28 on enp7s2"            'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
+check "Address 192.168.1.1/30 on enp7s2 (to BR-FW)" 'ip -4 addr show enp7s2 | grep -q "192.168.1.1/30"'
 check "Interface tun0 (GRE) is up"                   'ip addr show tun0'
 check "Address 10.10.10.2/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
+check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'
 check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
@@ -168,6 +190,8 @@ check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL
 check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
+check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
+check "sshpass installed"                           'command -v sshpass'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 iburst" /etc/chrony.conf'
@@ -204,12 +228,13 @@ echo
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "${CYAN}============================================================${NC}"
-echo -e " Run next : ${YELLOW}br-srv.sh${NC} on the branch server host"
-echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN)"
+echo -e " Run next : ${YELLOW}br-fw.sh${NC} on the branch firewall host"
+echo -e " Segment  : 192.168.1.0/30 (link BR-RTR - BR-FW)"
 echo
 echo -e " Before running it, set a static address on that host (enp7s1):"
-echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
-echo -e "   echo 'default via 192.168.0.1' > /etc/net/ifaces/enp7s1/ipv4route"
+echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+echo -e "   echo 192.168.1.2/30 > /etc/net/ifaces/enp7s1/ipv4address"
+echo -e "   echo 'default via 192.168.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
 echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
 echo -e "   systemctl restart network"
 echo -e "${CYAN}============================================================${NC}"

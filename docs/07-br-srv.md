@@ -10,8 +10,8 @@
 * ещё позже — **Docker-приложение** `testapp` (`docker.sh`, см.
   [09-web-services.md](09-web-services.md)).
 
-**Сеть.** `enp7s1`, `192.168.0.2/28`, шлюз `192.168.0.1` — задаются руками
-по подсказке из `br-rtr.sh`.
+**Сеть.** `enp7s1`, `192.168.0.2/28`, шлюз `192.168.0.1` (это BR-FW) —
+задаются руками по подсказке из `br-fw.sh`.
 
 **Почему Ansible именно на BR-SRV.** Требование задания. Логически это
 тоже оправдано: BR-SRV — сервер, а не рабочая станция, работает постоянно
@@ -27,7 +27,9 @@
 
 Этот сервер доступен снаружи через DNAT на BR-RTR:
 `ssh -p 2027 sshuser@172.16.2.2` → попадаете сюда
-([04-br-rtr.md §6](04-br-rtr.md#6-nat-и-проброс-портов)).
+([04-br-rtr.md §6](04-br-rtr.md#6-nat-и-проброс-портов)). По пути пакет
+проходит межсетевой экран BR-FW, который пропускает из интернета к BR-SRV
+именно порты 2027 и 8080 ([12-br-fw.md](12-br-fw.md)).
 
 ## 2. Установка Ansible и инвентаря
 
@@ -88,7 +90,7 @@ chrony-клиент с сервером `172.16.2.1` (ISP со стороны ф
 
 ```bash
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.100.1   # HQ-RTR
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.0.1     # BR-RTR
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.1.1     # BR-RTR
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2     # HQ-SRV
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2       # BR-SRV (сам себе)
 ```

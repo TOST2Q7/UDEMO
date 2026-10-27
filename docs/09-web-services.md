@@ -14,8 +14,11 @@ HQ-CLI (браузер)
 ISP nginx :80 (позже :443)  ── proxy.sh / gost-isp.sh
    │  по имени сайта (заголовок Host / SNI) выбирает бэкенд
    ├── web    → 172.16.1.2:8080 ─► HQ-RTR DNAT ─► 192.168.100.2:80   (HQ-SRV, Apache + PHP + MariaDB)
-   └── docker → 172.16.2.2:8080 ─► BR-RTR DNAT ─► 192.168.0.2:8080   (BR-SRV, Docker: testapp + MariaDB)
+   └── docker → 172.16.2.2:8080 ─► BR-RTR DNAT ─► BR-FW ─► 192.168.0.2:8080   (BR-SRV, Docker: testapp + MariaDB)
 ```
+
+Путь к docker проходит межсетевой экран BR-FW: он пропускает из интернета
+к BR-SRV порт 8080 (и SSH 2027) — см. [12-br-fw.md](12-br-fw.md).
 
 **Почему прокси именно на ISP.** По легенде ISP — точка на границе с
 внешним миром, а оба офиса спрятаны за NAT. Прокси «снаружи» — это

@@ -90,15 +90,31 @@ host-record=hq-rtr.au-team.irpo,192.168.100.1
 cname=moodle.au-team.irpo,hq-rtr.au-team.irpo
 cname=wiki.au-team.irpo,hq-rtr.au-team.irpo
 
-address=/br-rtr.au-team.irpo/192.168.0.1
-ptr-record=1.0.168.192.in-addr.arpa,br-rtr.au-team.irpo
+address=/br-rtr.au-team.irpo/192.168.1.1
+ptr-record=1.1.168.192.in-addr.arpa,br-rtr.au-team.irpo
+address=/br-fw.au-team.irpo/192.168.0.1
+ptr-record=1.0.168.192.in-addr.arpa,br-fw.au-team.irpo
 address=/hq-srv.au-team.irpo/192.168.100.2
 ptr-record=2.100.168.192.in-addr.arpa,hq-srv.au-team.irpo
 address=/br-srv.au-team.irpo/192.168.0.2
 ptr-record=2.0.168.192.in-addr.arpa,br-srv.au-team.irpo
 address=/hq-cli.au-team.irpo/192.168.200.2
 ptr-record=2.200.168.192.in-addr.arpa,hq-cli.au-team.irpo
+address=/web.au-team.irpo/172.16.1.1
+ptr-record=1.1.16.172.in-addr.arpa,web.au-team.irpo
+address=/docker.au-team.irpo/172.16.2.1
+ptr-record=1.2.16.172.in-addr.arpa,docker.au-team.irpo
 ```
+
+* **`br-rtr` → `192.168.1.1`, `br-fw` → `192.168.0.1`.** Адрес
+  `192.168.0.1` (шлюз филиала) теперь принадлежит межсетевому экрану BR-FW,
+  а BR-RTR доступен изнутри по своему адресу на линке до BR-FW
+  ([12-br-fw.md](12-br-fw.md)).
+* **`web` и `docker`** указывают на ISP, где работает обратный прокси
+  nginx (`proxy.sh`): `web` — на его адрес в сторону HQ, `docker` — в
+  сторону филиала. Nginx слушает на всех адресах, так что годится любой.
+  На HQ-CLI `gost-hqcli.sh` дополнительно прописывает оба имени в
+  `/etc/hosts` на `172.16.1.1` — эта запись там главнее DNS.
 
 Три разных механизма — и каждый выбран не случайно:
 
