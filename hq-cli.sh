@@ -15,7 +15,9 @@ IFACE="enp7s1"
 ip link show enp7s1.200 &>/dev/null && IFACE="enp7s1.200"
 # ===========================================================
 
-apt-get update && apt-get install -y yandex-browser-stable
+apt-get update
+# Yandex Browser is not installed for now; uncomment to bring it back
+# apt-get install -y yandex-browser-stable
 
 # ===========================================================
 # Time zone (Alt JeOS can ship without the time zone database)
@@ -115,7 +117,7 @@ check "VLAN 200 address from DHCP on $IFACE"        "ip -4 addr show $IFACE | gr
 check "Default route via HQ-RTR (192.168.200.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.200.1 "'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
-check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
+# check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
 check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
 check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid5/nfs /mnt/nfs nfs" /etc/fstab'
 check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'

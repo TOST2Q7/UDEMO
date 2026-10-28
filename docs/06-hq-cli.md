@@ -22,8 +22,15 @@
 ## 1. Яндекс Браузер
 
 ```bash
-apt-get update && apt-get install -y yandex-browser-stable
+apt-get update
+# Yandex Browser is not installed for now; uncomment to bring it back
+# apt-get install -y yandex-browser-stable
 ```
+
+**Сейчас установка закомментирована**, как и проверка
+`Yandex Browser installed`: `apt-get update` остаётся, он нужен остальным
+установкам скрипта. Чтобы вернуть браузер, раскомментируйте обе строки в
+`hq-cli.sh`.
 
 Ставится первым — это самая «тяжёлая» загрузка, и её лучше сделать, пока
 всё остальное ещё не трогали.
@@ -100,7 +107,7 @@ UID 2027, wheel, sudo без пароля, порт 2027, root запрещён,
 
 | Проверка | Смысл |
 |---|---|
-| `Yandex Browser installed` → `rpm -q yandex-browser-stable` | пакет установлен |
+| `Yandex Browser installed` → `rpm -q yandex-browser-stable` | пакет установлен (сейчас закомментирована вместе с установкой) |
 | `/mnt/nfs is mounted` → `mountpoint -q` | NFS реально смонтирован, а не просто создан каталог |
 | `NFS mount added to fstab` | подключение будет восстановлено после перезагрузки |
 | chrony (4 проверки) | сервис, автозапуск, конфиг, реальная синхронизация с `172.16.1.1` |
