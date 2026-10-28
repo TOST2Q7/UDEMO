@@ -109,7 +109,7 @@ sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.
 ### 6.2. Поиск HQ-CLI
 
 ```bash
-for i in $(seq 2 10); do
+for i in $(seq 2 6); do
     IP="${SUBNET}.${i}"
     ping -c 1 -W 1 "$IP" &>/dev/null || continue
     if timeout "$TIMEOUT" bash -c "</dev/tcp/$IP/$PORT" 2>/dev/null; then
@@ -119,7 +119,7 @@ for i in $(seq 2 10); do
 done
 ```
 
-HQ-CLI получает **случайный** адрес из DHCP-пула `.2–.10`, так что заранее
+HQ-CLI получает **случайный** адрес из DHCP-пула `.2–.6`, так что заранее
 его не знает ни инвентарь, ни DNS. Скрипт перебирает весь пул и ищет адрес,
 на котором открыт TCP-порт 2027 (SSH `sshuser`).
 

@@ -182,7 +182,7 @@ sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2
 sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2
 
-# --- Connect to the host with a dynamic IP (DHCP pool 192.168.200.2-192.168.200.10) ---
+# --- Connect to the host with a dynamic IP (DHCP pool 192.168.200.2-192.168.200.6) ---
 PORT=2027
 USER=sshuser
 SUBNET=192.168.200
@@ -191,7 +191,7 @@ FOUND_IP=""
 
 # bash's /dev/tcp instead of nc, which Alt does not ship by default;
 # ping first so a dead address costs 1 s instead of a hanging connect
-for i in $(seq 2 10); do
+for i in $(seq 2 6); do
     IP="${SUBNET}.${i}"
     ping -c 1 -W 1 "$IP" &>/dev/null || continue
     if timeout "$TIMEOUT" bash -c "</dev/tcp/$IP/$PORT" 2>/dev/null; then

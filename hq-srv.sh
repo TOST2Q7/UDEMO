@@ -40,13 +40,13 @@ fi
 echo "=== Checking the link to HQ-RTR (VLAN 100 on $IFACE) ==="
 ip -br addr
 ip route
-if ! ip -4 addr | grep -q "inet 192.168.100.2/27"; then
-    net_fail "192.168.100.2/27 is not configured on this host" \
+if ! ip -4 addr | grep -q "inet 192.168.100.2/28"; then
+    net_fail "192.168.100.2/28 is not configured on this host" \
         "Put it on $IFACE as printed at the end of hq-rtr.sh (./hq-srv-steps there), then: systemctl restart network"
 elif ! ping -c 2 -W 2 192.168.100.1 &>/dev/null; then
     net_fail "Gateway 192.168.100.1 (HQ-RTR) does not answer" \
         "${VLAN_HINT[@]}" \
-        "- HQ-RTR: ip -br addr | grep enp7s2.100   -> must show 192.168.100.1/27"
+        "- HQ-RTR: ip -br addr | grep enp7s2.100   -> must show 192.168.100.1/28"
 elif ! ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "; then
     net_fail "Internet traffic does not go via 192.168.100.1" \
         "Route in use: $(ip route get 77.88.8.8 2>&1 | head -1)" \
@@ -144,7 +144,7 @@ chown -R 99:99 /raid5/nfs
 chmod 777 /raid5/nfs
 
 # Add NFS export CHANGE TO YOUR OWN NETWORKS
-echo "/raid5/nfs 192.168.200.0/28(rw,sync,no_subtree_check)" >> /etc/exports
+echo "/raid5/nfs 192.168.200.0/29(rw,sync,no_subtree_check)" >> /etc/exports
 
 # Restart NFS and create a test file
 systemctl restart nfs
@@ -213,7 +213,7 @@ echo "=== Checking hq-srv configuration (VLAN 100 on $IFACE) ===" | tee -a "$LOG
 check "Hostname = hq-srv.tkhis.pro"              '[ "$(hostnamectl --static)" = "hq-srv.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
-check "Address 192.168.100.2/27 on $IFACE"          "ip -4 addr show $IFACE | grep -q 'inet 192.168.100.2/27'"
+check "Address 192.168.100.2/28 on $IFACE"          "ip -4 addr show $IFACE | grep -q 'inet 192.168.100.2/28'"
 check "Default route via HQ-RTR (192.168.100.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.100.1 "'
 check "Internet reachable (77.88.8.8)"              'ping -c 2 -W 2 77.88.8.8'
 check "Internet names resolve via dnsmasq"          'getent hosts raw.githubusercontent.com'
@@ -238,7 +238,7 @@ check "/raid5 is mounted"                           'mountpoint -q /raid5'
 check "/raid5 added to fstab"                       'grep -q "/dev/md0p1 /raid5" /etc/fstab'
 check "NFS server active"                           'systemctl is-active --quiet nfs'
 check "/raid5/nfs directory exists"                 '[ -d /raid5/nfs ]'
-check "NFS export configured"                       'grep -q "^/raid5/nfs 192.168.200.0/28" /etc/exports'
+check "NFS export configured"                       'grep -q "^/raid5/nfs 192.168.200.0/29" /etc/exports'
 check "NFS test file created"                       '[ -f /raid5/nfs/test ]'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'

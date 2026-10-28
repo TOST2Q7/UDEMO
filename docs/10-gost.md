@@ -37,7 +37,7 @@
 | `WEB_FQDN`, `DOCKER_FQDN` | имена сайтов | должны совпадать с тем, что пользователь вводит в адресной строке |
 | `ISP_USER=root`, `ISP_HOST=172.16.1.1` | куда доставлять сертификаты сайтов | ISP со стороны HQ; root разрешён специально для этого (см. [02-isp.md §7](02-isp.md#8-ssh-разрешён-вход-root)) |
 | `HQCLI_USER=sshuser`, `HQCLI_PORT=2027` | куда доставлять ca.cer | единственный пользователь с SSH на HQ-CLI |
-| `HQCLI_SUBNET`, `HQCLI_POOL` | `192.168.200`, `2..10` | DHCP-пул для поиска HQ-CLI |
+| `HQCLI_SUBNET`, `HQCLI_POOL` | `192.168.200`, `2..6` | DHCP-пул для поиска HQ-CLI |
 | `HQCLI_HOST="${HQCLI_HOST:-}"` | пусто или из окружения | `HQCLI_HOST=1.2.3.4 ./gost.sh` пропускает поиск |
 
 ### 1.2. Включение ГОСТ в OpenSSL

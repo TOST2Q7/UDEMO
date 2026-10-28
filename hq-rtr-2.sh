@@ -100,7 +100,7 @@ echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "$LINE"
 echo -e " Run next : ${YELLOW}hq-cli.sh${NC} on the HQ client"
 if [ "$1" = "manual" ]; then
-    echo -e " Segment  : VLAN 200, 192.168.200.0/28 (DHCP) - ${YELLOW}the VM tags it${NC} (enp7s1.200)"
+    echo -e " Segment  : VLAN 200, 192.168.200.0/29 (DHCP) - ${YELLOW}the VM tags it${NC} (enp7s1.200)"
     echo
     echo -e " Proxmox: no VLAN tag on the HQ-CLI NIC. Inside HQ-CLI (NetworkManager):"
     echo    "   nmcli con add type vlan con-name enp7s1.200 ifname enp7s1.200 dev enp7s1 id 200 ipv4.method auto"
@@ -110,10 +110,10 @@ if [ "$1" = "manual" ]; then
     echo    "   printf '%s\n' TYPE=vlan HOST=enp7s1 VID=200 BOOTPROTO=dhcp > /etc/net/ifaces/enp7s1.200/options"
     echo    "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
     echo    "   systemctl restart network"
-    echo -e " Then: ip -br addr show enp7s1.200   -> 192.168.200.x/28 from this router"
+    echo -e " Then: ip -br addr show enp7s1.200   -> 192.168.200.x/29 from this router"
     OTHER="proxmox"
 else
-    echo -e " Segment  : VLAN 200, 192.168.200.0/28 (DHCP) - ${YELLOW}Proxmox tags it${NC}"
+    echo -e " Segment  : VLAN 200, 192.168.200.0/29 (DHCP) - ${YELLOW}Proxmox tags it${NC}"
     echo
     echo -e " Proxmox: the HQ-CLI NIC has VLAN Tag=200. Nothing to set by hand"
     echo -e " inside HQ-CLI: address, gateway and, as of this change, the internal"

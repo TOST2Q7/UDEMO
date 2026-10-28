@@ -51,8 +51,8 @@ HOST=enp7s2
 VID=999
 BOOTPROTO=static
 EOF
-echo "192.168.100.1/27" > /etc/net/ifaces/enp7s2.100/ipv4address
-echo "192.168.200.1/28" > /etc/net/ifaces/enp7s2.200/ipv4address
+echo "192.168.100.1/28" > /etc/net/ifaces/enp7s2.100/ipv4address
+echo "192.168.200.1/29" > /etc/net/ifaces/enp7s2.200/ipv4address
 echo "192.168.99.1/29" > /etc/net/ifaces/enp7s2.999/ipv4address
 
 # Enable routing (any spelling of the line, add it if it is missing)
@@ -69,7 +69,7 @@ apt-get update && apt-get install -y dnsmasq
 cat > /etc/dnsmasq.conf <<EOF
 no-resolv
 domain=tkhis.pro
-dhcp-range=192.168.200.2,192.168.200.10,999h
+dhcp-range=192.168.200.2,192.168.200.6,999h
 dhcp-option=3,192.168.200.1
 dhcp-option=6,77.88.8.8
 dhcp-option=15,tkhis.pro
@@ -117,8 +117,8 @@ systemctl enable --now frr
 vtysh << 'EOF'
 conf
 router ospf
-network 192.168.100.0/27 area 0
-network 192.168.200.0/28 area 0
+network 192.168.100.0/28 area 0
+network 192.168.200.0/29 area 0
 network 192.168.99.0/29 area 0
 network 10.10.10.0/24 area 0
 exit
@@ -240,9 +240,9 @@ check "BR-RTR WAN reachable (172.16.2.2)"           'ping -c 2 -W 1 172.16.2.2'
 check "Internet from this router (77.88.8.8)"       'ping -c 2 -W 2 77.88.8.8'
 check "Internet via NAT from VLAN100 (src .100.1)"  'ping -c 2 -W 2 -I 192.168.100.1 77.88.8.8'
 check "VLAN100 (enp7s2.100) is up"                  'ip addr show enp7s2.100'
-check "Address 192.168.100.1/27 on enp7s2.100"      'ip -4 addr show enp7s2.100 | grep -q "192.168.100.1/27"'
+check "Address 192.168.100.1/28 on enp7s2.100"      'ip -4 addr show enp7s2.100 | grep -q "192.168.100.1/28"'
 check "VLAN200 (enp7s2.200) is up"                  'ip addr show enp7s2.200'
-check "Address 192.168.200.1/28 on enp7s2.200"      'ip -4 addr show enp7s2.200 | grep -q "192.168.200.1/28"'
+check "Address 192.168.200.1/29 on enp7s2.200"      'ip -4 addr show enp7s2.200 | grep -q "192.168.200.1/29"'
 check "VLAN999 (enp7s2.999) is up"                  'ip addr show enp7s2.999'
 check "Address 192.168.99.1/29 on enp7s2.999"       'ip -4 addr show enp7s2.999 | grep -q "192.168.99.1/29"'
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
@@ -322,28 +322,28 @@ echo -e "${CYAN} NEXT STEP${NC}"
 echo -e "$LINE"
 echo -e " Run next : ${YELLOW}hq-srv.sh${NC} on the HQ server host"
 if [ "$1" = "manual" ]; then
-    echo -e " Segment  : VLAN 100, 192.168.100.0/27 - ${YELLOW}the VM tags it${NC} (enp7s1.100)"
+    echo -e " Segment  : VLAN 100, 192.168.100.0/28 - ${YELLOW}the VM tags it${NC} (enp7s1.100)"
     echo
     echo -e " Proxmox: no VLAN tag on the HQ-SRV and HQ-CLI NICs. Inside HQ-SRV:"
     echo    "   mkdir -p /etc/net/ifaces/enp7s1.100"
     echo    "   printf '%s\n' TYPE=vlan HOST=enp7s1 VID=100 BOOTPROTO=static > /etc/net/ifaces/enp7s1.100/options"
     echo    "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
     echo    "   rm -f /etc/net/ifaces/enp7s1/ipv4address /etc/net/ifaces/enp7s1/ipv4route"
-    echo    "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1.100/ipv4address"
+    echo    "   echo 192.168.100.2/28 > /etc/net/ifaces/enp7s1.100/ipv4address"
     echo    "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1.100/ipv4route"
     echo    "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1.100/resolv.conf"
     echo    "   systemctl restart network"
     echo    "   ping -c2 192.168.100.1 && ping -c2 77.88.8.8"
     OTHER="proxmox"
 else
-    echo -e " Segment  : VLAN 100, 192.168.100.0/27 - ${YELLOW}Proxmox tags it${NC}"
+    echo -e " Segment  : VLAN 100, 192.168.100.0/28 - ${YELLOW}Proxmox tags it${NC}"
     echo
     echo -e " Proxmox: the HQ-SRV NIC has VLAN Tag=100 (HQ-CLI's Tag=200), this"
     echo -e " router's NIC has no tag, the bridge is VLAN aware. Inside HQ-SRV the"
     echo -e " address goes straight on enp7s1, no enp7s1.100 (that would double-tag):"
     echo    "   rm -rf /etc/net/ifaces/enp7s1.100"
     echo    "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
-    echo    "   echo 192.168.100.2/27 > /etc/net/ifaces/enp7s1/ipv4address"
+    echo    "   echo 192.168.100.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
     echo    "   echo 'default via 192.168.100.1' > /etc/net/ifaces/enp7s1/ipv4route"
     echo    "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
     echo    "   systemctl restart network"
