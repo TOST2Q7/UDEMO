@@ -2,7 +2,7 @@
 
 **Роль узла.** Сервер филиала:
 
-* SSH-доступ для `sshuser` (точно так же, как на HQ-SRV);
+* SSH-доступ для `userssh` (точно так же, как на HQ-SRV);
 * **станция управления Ansible** — отсюда автоматизированно управляются
   остальные узлы;
 * позже — **контроллер домена Samba AD** (`samba.sh`, см.
@@ -20,14 +20,14 @@
 
 ---
 
-## 1. SSH и `sshuser`
+## 1. SSH и `userssh`
 
-Идентично HQ-SRV ([05-hq-srv.md §3](05-hq-srv.md#3-ssh-и-пользователь-sshuser)).
+Идентично HQ-SRV ([05-hq-srv.md §3](05-hq-srv.md#3-ssh-и-пользователь-userssh)).
 Отличие в порядке: здесь сначала проверки SSH, затем Ansible — поэтому
 первая порция `check` выполняется посреди скрипта.
 
 Этот сервер доступен снаружи через DNAT на BR-RTR:
-`ssh -p 2027 sshuser@172.16.2.2` → попадаете сюда
+`ssh -p 2127 userssh@172.16.2.2` → попадаете сюда
 ([04-br-rtr.md §6](04-br-rtr.md#6-nat-и-проброс-портов)).
 
 ## 2. Установка Ansible и инвентаря
@@ -88,10 +88,10 @@ chrony-клиент с сервером `172.16.2.1` (ISP со стороны ф
 ### 6.1. SSH-вход на каждый узел
 
 ```bash
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.100.1   # HQ-RTR
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.0.1     # BR-RTR
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2     # HQ-SRV
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2       # BR-SRV (сам себе)
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.100.1   # HQ-RTR
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.0.1     # BR-RTR
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.100.2     # HQ-SRV
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.0.2       # BR-SRV (сам себе)
 ```
 
 **Зачем.** Ручная, наглядная проверка того, что учётные данные и порт на
@@ -121,7 +121,7 @@ done
 
 HQ-CLI получает **случайный** адрес из DHCP-пула `.2–.6`, так что заранее
 его не знает ни инвентарь, ни DNS. Скрипт перебирает весь пул и ищет адрес,
-на котором открыт TCP-порт 2027 (SSH `sshuser`).
+на котором открыт TCP-порт 2127 (SSH `userssh`).
 
 * **Сначала `ping` с таймаутом 1 с.** Если адрес никем не занят, попытка
   TCP-подключения к нему висела бы до таймаута; пинг отсекает пустые
@@ -131,7 +131,7 @@ HQ-CLI получает **случайный** адрес из DHCP-пула `.2
   в ALT по умолчанию нет (так же сделано в `gost.sh`).
 * **`timeout 3`** — ограничение на само подключение.
 
-Порт 2027 выбран как «подпись» HQ-CLI: в VLAN 200 других узлов с SSH на
+Порт 2127 выбран как «подпись» HQ-CLI: в VLAN 200 других узлов с SSH на
 этом порту нет.
 
 ```bash
@@ -160,9 +160,9 @@ Networking:
   hosts:
     hq-rtr:
       ansible_host: 192.168.100.1
-      ansible_user: net_admin
+      ansible_user: admin
       ansible_password: P@ssw0rd
-      ansible_port: 2027
+      ansible_port: 2127
     br-rtr: ...
 Servers:
   hosts:
@@ -176,14 +176,14 @@ Clients:
 ```
 
 Инвентарь в YAML-формате: группы `Networking` (маршрутизаторы, вход
-`net_admin`), `Servers` и `Clients` (вход `sshuser`), в них узлы с
+`admin`), `Servers` и `Clients` (вход `userssh`), в них узлы с
 параметрами подключения. Все группы входят в `all`, поэтому
 `ansible -m ping all` проверяет все пять узлов.
 
 | Параметр | Смысл |
 |---|---|
 | `ansible_host` | адрес для подключения (имя в инвентаре — `hq-srv` — это лишь метка) |
-| `ansible_port: 2027` | нестандартный порт SSH |
+| `ansible_port: 2127` | нестандартный порт SSH |
 | `ansible_user` / `ansible_password` | вход по паролю — для этого нужен `sshpass` |
 
 `br-srv.sh` скачивает этот файл как `/etc/ansible/inventory.yml` — инвентарь

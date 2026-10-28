@@ -92,28 +92,28 @@ echo "OSPF configuration complete!"
 # Set up NAT
 apt-get install iptables -y
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
-# Forward port 2027 arriving from outside (WAN) to BR-SRV; matching the LAN
+# Forward port 2127 arriving from outside (WAN) to BR-SRV; matching the LAN
 # address instead would hijack SSH to this router itself
-iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2127 -j DNAT --to-destination 192.168.0.2:2127
 # Forward 8080 to testapp on BR-SRV (docker.sh), ISP's nginx proxies to it
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 
-# 1. Create user net_admin (OR ANOTHER USER, IF CHANGED UPDATE THE NAME ETC IN THIS FILE)
-useradd -m net_admin
+# 1. Create user admin (OR ANOTHER USER, IF CHANGED UPDATE THE NAME ETC IN THIS FILE)
+useradd -m admin
 
 # 2. Set password P@ssw0rd (no confirmation)
-echo "net_admin:P@ssw0rd" | chpasswd
+echo "admin:P@ssw0rd" | chpasswd
 
 # 3. Add to group wheel
-gpasswd -a net_admin wheel
+gpasswd -a admin wheel
 
 # 4. Configure passwordless sudo
-echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+echo "admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# 5. Configure SSH (port 2027, disable root login)
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+# 5. Configure SSH (port 2127, disable root login)
+sed -i 's/#Port 22/Port 2127/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 
 # 6. Start SSH at boot and restart it
@@ -123,7 +123,7 @@ systemctl restart sshd
 # sshpass: type the lab password for ssh/scp from this host without a prompt
 apt-get install -y sshpass
 
-echo "Done! User net_admin created, SSH configured on port 2027."
+echo "Done! User admin created, SSH configured on port 2127."
 
 # ===========================================================
 # Time zone (Alt JeOS can ship without the time zone database)
@@ -205,13 +205,13 @@ check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "BR-SRV reachable (192.168.0.2)"              'ping -c 2 -W 1 192.168.0.2'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
-check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
+check "SSH DNAT (2127) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2127 -j DNAT --to-destination 192.168.0.2:2127'
 check "testapp DNAT (8080) configured"              'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
-check "User net_admin exists"                       'id net_admin'
-check "net_admin is in group wheel"                 'id -nG net_admin | grep -qw wheel'
-check "net_admin added to sudoers"                  'grep -q "net_admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "User admin exists"                           'id admin'
+check "admin is in group wheel"                     'id -nG admin | grep -qw wheel'
+check "admin added to sudoers"                      'grep -q "admin ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2127"                    'grep -q "^Port 2127" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
 check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'

@@ -61,43 +61,43 @@ EOF
 mount -a
 ls /mnt/nfs
 
-# Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
-useradd -u 2027 -m sshuser
+# Create user userssh with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
+useradd -u 2027 -m userssh
 
 # Set password P@ssw0rd (no confirmation)
-echo "sshuser:P@ssw0rd" | chpasswd
+echo "userssh:P@ssw0rd" | chpasswd
 
 # Add to group wheel
-gpasswd -a sshuser wheel
+gpasswd -a userssh wheel
 
 # Configure passwordless sudo
-echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+echo "userssh ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Install and enable sshd - Alt Workstation does not always ship it, and
-# without it gost.sh / ansible cannot reach this host on 2027
+# without it gost.sh / ansible cannot reach this host on 2127
 apt-get install -y openssh-server
 systemctl enable --now sshd
 
 # Configure SSH
-sed -i 's/^#\?Port .*/Port 2027/' /etc/openssh/sshd_config
-grep -q "^Port 2027" /etc/openssh/sshd_config || echo "Port 2027" >> /etc/openssh/sshd_config
+sed -i 's/^#\?Port .*/Port 2127/' /etc/openssh/sshd_config
+grep -q "^Port 2127" /etc/openssh/sshd_config || echo "Port 2127" >> /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
-echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
+echo "AllowUsers userssh" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 
 # Create banner
 echo "Authorized access only" > /etc/openssh/banner
 
-# Restart SSH so it listens on 2027
+# Restart SSH so it listens on 2127
 systemctl restart sshd
 
 # sshpass: type the lab password for ssh/scp from this host without a prompt
 apt-get install -y sshpass
 
 echo "Configuration complete:"
-echo "- User: sshuser (password: P@ssw0rd)"
-echo "- SSH port: 2027"
+echo "- User: userssh (password: P@ssw0rd)"
+echo "- SSH port: 2127"
 echo "- Root login disabled"
 echo "- Banner created"
 
@@ -134,19 +134,19 @@ check "nfs-clients installed"                       'command -v mount.nfs'
 check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
 check "NFS share is writable"                       'touch /mnt/nfs/.hq-cli-write && rm -f /mnt/nfs/.hq-cli-write'
 check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid5/nfs /mnt/nfs nfs" /etc/fstab'
-check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
-check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
-check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "User userssh created (UID 2027)"             '[ "$(id -u userssh)" = "2027" ]'
+check "userssh is in group wheel"                   'id -nG userssh | grep -qw wheel'
+check "userssh added to sudoers"                    'grep -q "userssh ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2127"                    'grep -q "^Port 2127" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "AllowUsers userssh configured"               'grep -q "^AllowUsers userssh" /etc/openssh/sshd_config'
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "openssh-server installed"                    'rpm -q openssh-server'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
 check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 check "sshpass installed"                           'command -v sshpass'
-check "sshd listens on port 2027"                   'ss -tln | grep -q ":2027 "'
+check "sshd listens on port 2127"                   'ss -tln | grep -q ":2127 "'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'

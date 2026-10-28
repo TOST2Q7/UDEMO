@@ -92,15 +92,15 @@ vtysh лишь сообщит, что такой сети нет). **Ключ и
 должны совпадать. После схождения OSPF BR-RTR знает три VLAN головного
 офиса, а HQ-RTR — `192.168.0.0/28`.
 
-## 5. Пользователь `net_admin`, SSH
+## 5. Пользователь `admin`, SSH
 
-Идентично HQ-RTR ([§1.9–1.10](03-hq-rtr.md#19-пользователь-net_admin)).
+Идентично HQ-RTR ([§1.9–1.10](03-hq-rtr.md#19-пользователь-admin)).
 
 ## 6. NAT и проброс портов
 
 ```bash
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
-iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2127 -j DNAT --to-destination 192.168.0.2:2127
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
@@ -108,21 +108,21 @@ systemctl enable --now iptables
 
 **MASQUERADE** — как на HQ-RTR.
 
-**DNAT** — проброс: TCP-соединения, пришедшие **снаружи** на порт 2027
-маршрутизатора, перенаправляются на `192.168.0.2:2027` (SSH BR-SRV). Так
+**DNAT** — проброс: TCP-соединения, пришедшие **снаружи** на порт 2127
+маршрутизатора, перенаправляются на `192.168.0.2:2127` (SSH BR-SRV). Так
 к серверу филиала можно подключиться по WAN-адресу роутера
-(`ssh -p 2027 sshuser@172.16.2.2`), хотя сам сервер в частной сети.
+(`ssh -p 2127 userssh@172.16.2.2`), хотя сам сервер в частной сети.
 
 Разбор:
 * `PREROUTING` — цепочка «до маршрутизации»: адрес назначения надо
   подменить **до** того, как ядро решит, куда отправлять пакет;
 * `-i enp7s1` — только пакеты, **пришедшие с WAN**;
-* `--dport 2027` — только этот порт;
+* `--dport 2127` — только этот порт;
 * `DNAT --to-destination` — подмена адреса (и порта) назначения; ответы
   автоматически получат обратную подмену благодаря conntrack.
 
 **Почему `-i enp7s1`, а не `-d <адрес>`.** Комментарий в скрипте прямо
-объясняет: на маршрутизаторе **тоже** работает SSH на порту 2027. Если бы
+объясняет: на маршрутизаторе **тоже** работает SSH на порту 2127. Если бы
 правило совпадало по LAN-адресу роутера (как в закомментированной заготовке
 на HQ-RTR), то попытка администратора зайти на сам BR-RTR по SSH
 превращалась бы в вход на BR-SRV. Привязка к входному WAN-интерфейсу
@@ -172,7 +172,7 @@ chrony-клиент с сервером `172.16.2.1` — ближайший к �
 * `OSPF network type on tun0 is broadcast` — тип сети совпадает с HQ-RTR.
 * `OSPF neighbour 10.10.10.1 is Full on tun0` — соседство с HQ-RTR
   установлено полностью.
-* `SSH DNAT (2027) configured`, `testapp DNAT (8080) configured` —
+* `SSH DNAT (2127) configured`, `testapp DNAT (8080) configured` —
   `iptables -C` с точно теми же правилами.
 * `Time synced from ISP (172.16.2.1)` — chrony выбрал этот источник.
 

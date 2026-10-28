@@ -79,22 +79,22 @@ systemctl restart dnsmasq
 
 echo "Configuring SSH"
 
-# Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
-useradd -u 2027 -m sshuser
+# Create user userssh with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
+useradd -u 2027 -m userssh
 
 # Set password P@ssw0rd (no confirmation)
-echo "sshuser:P@ssw0rd" | chpasswd
+echo "userssh:P@ssw0rd" | chpasswd
 
 # Add to group wheel
-gpasswd -a sshuser wheel
+gpasswd -a userssh wheel
 
 # Configure passwordless sudo
-echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+echo "userssh ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Configure SSH
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+sed -i 's/#Port 22/Port 2127/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
-echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
+echo "AllowUsers userssh" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 
@@ -109,8 +109,8 @@ systemctl restart sshd
 apt-get install -y sshpass
 
 echo "Configuration complete:"
-echo "- User: sshuser (password: P@ssw0rd)"
-echo "- SSH port: 2027"
+echo "- User: userssh (password: P@ssw0rd)"
+echo "- SSH port: 2127"
 echo "- Root login disabled"
 echo "- Banner created"
 
@@ -223,12 +223,12 @@ check "Internet names resolve via dnsmasq"          'getent hosts raw.githubuser
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
 check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
 check "/etc/dnsmasq.conf copied"                    '[ -s /etc/dnsmasq.conf ]'
-check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
-check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
-check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "User userssh created (UID 2027)"             '[ "$(id -u userssh)" = "2027" ]'
+check "userssh is in group wheel"                   'id -nG userssh | grep -qw wheel'
+check "userssh added to sudoers"                    'grep -q "userssh ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2127"                    'grep -q "^Port 2127" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "AllowUsers userssh configured"               'grep -q "^AllowUsers userssh" /etc/openssh/sshd_config'
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "SSH service active"                          'systemctl is-active --quiet sshd'

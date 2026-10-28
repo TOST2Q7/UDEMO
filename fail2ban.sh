@@ -9,10 +9,10 @@ LOG="$DIR/${NAME%.sh}-check.log"
 NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
-# Runs on HQ-SRV: fail2ban guards SSH on 2027 - 3 failed logins within
+# Runs on HQ-SRV: fail2ban guards SSH on 2127 - 3 failed logins within
 # 10 minutes ban the address for 1 minute
 JAIL="/etc/fail2ban/jail.conf"
-SSH_PORT=2027
+SSH_PORT=2127
 # ===========================================================
 
 apt-get update
@@ -110,7 +110,7 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e " fail2ban guards SSH on port $SSH_PORT. To see it work, from another"
     echo -e " host enter a wrong password 3 times:"
-    echo -e "   ssh -p $SSH_PORT sshuser@192.168.100.2"
+    echo -e "   ssh -p $SSH_PORT userssh@192.168.100.2"
     echo -e " then here: ${YELLOW}fail2ban-client status sshd${NC} lists the banned address"
     echo -e " for 1 minute."
     echo -e "${CYAN}============================================================${NC}"

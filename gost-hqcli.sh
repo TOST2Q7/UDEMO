@@ -11,16 +11,16 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 
 WEB_FQDN="web.tkhis.pro"
 DOCKER_FQDN="docker.tkhis.pro"
-HQCLI_USER="sshuser"
+HQCLI_USER="userssh"
 ANCHOR="/etc/pki/ca-trust/source/anchors/ca.cer"
 # nginx reverse proxy on ISP, reachable from here through HQ-RTR
 PROXY_IP="172.16.1.1"
 # ===========================================================
 
-# gost.sh (on HQ-SRV) copies ca.cer into sshuser's Documents folder, but
+# gost.sh (on HQ-SRV) copies ca.cer into userssh's Documents folder, but
 # this script is usually run as root, whose $HOME is /root
 USER_HOME="$(getent passwd "$HQCLI_USER" | cut -d: -f6)"
-# Documents as sshuser's desktop names it (user-dirs.dirs), if it has one
+# Documents as userssh's desktop names it (user-dirs.dirs), if it has one
 USER_DOCS="$(sed -n 's/^XDG_DOCUMENTS_DIR="\(.*\)"$/\1/p' "$USER_HOME/.config/user-dirs.dirs" 2>/dev/null)"
 USER_DOCS="${USER_DOCS/\$HOME/$USER_HOME}"
 CA_CER=""

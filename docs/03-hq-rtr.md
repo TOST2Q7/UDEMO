@@ -33,7 +33,7 @@ apt-get install shadow-groups -y
 ```
 
 `shadow-groups` содержит утилиту `gpasswd`, которая понадобится ниже для
-добавления `net_admin` в группу `wheel`. В минимальном образе ALT её нет.
+добавления `admin` в группу `wheel`. В минимальном образе ALT её нет.
 Ставится в самом начале — пока DNS ещё публичный и репозиторий доступен.
 
 ### 1.2. Trunk-интерфейс `enp7s2`
@@ -252,7 +252,7 @@ OSPF-сосед, способный подсунуть ложные маршру
 ```bash
 iptables -t nat -A POSTROUTING -o enp7s1 -j MASQUERADE
 iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.100.2:80
-iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.100.2:2027
+iptables -t nat -A PREROUTING -i enp7s1 -p tcp --dport 2127 -j DNAT --to-destination 192.168.100.2:2127
 iptables-save > /etc/sysconfig/iptables
 systemctl enable --now iptables
 ```
@@ -275,20 +275,20 @@ systemctl enable --now iptables
 почему важен `-i enp7s1` — в [04-br-rtr.md §6](04-br-rtr.md#6-nat-и-проброс-портов);
 общая схема веб-сервисов — в [09-web-services.md](09-web-services.md).
 
-**Проброс SSH `2027 → 192.168.100.2:2027`.** Раньше эта строка была
+**Проброс SSH `2127 → 192.168.100.2:2127`.** Раньше эта строка была
 закомментирована: в варианте с `-d <LAN-адрес роутера>` правило
 перехватывало SSH к самому роутеру. Сейчас оно, как на BR-RTR, привязано к
-входному WAN-интерфейсу (`-i enp7s1`): снаружи порт 2027 ведёт на HQ-SRV,
+входному WAN-интерфейсу (`-i enp7s1`): снаружи порт 2127 ведёт на HQ-SRV,
 а изнутри и через туннель — на сам HQ-RTR (см.
 [04-br-rtr.md](04-br-rtr.md#6-nat-и-проброс-портов)).
 
-### 1.9. Пользователь `net_admin`
+### 1.9. Пользователь `admin`
 
 ```bash
-useradd -m net_admin
-echo "net_admin:P@ssw0rd" | chpasswd
-gpasswd -a net_admin wheel
-echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+useradd -m admin
+echo "admin:P@ssw0rd" | chpasswd
+gpasswd -a admin wheel
+echo "admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 ```
 
 Требование задания: у сетевого оборудования должен быть отдельный
@@ -306,15 +306,15 @@ echo "net_admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 ### 1.10. SSH
 
 ```bash
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+sed -i 's/#Port 22/Port 2127/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
 systemctl restart sshd
 ```
 
-* **Порт 2027** — требование задания. Практический смысл нестандартного
+* **Порт 2127** — требование задания. Практический смысл нестандартного
   порта — отсечь массовых ботов, сканирующих 22-й.
 * **`PermitRootLogin no`** — вход только под именным пользователем
-  (`net_admin`), а повышение прав — через sudo. Так в логах видно, кто что
+  (`admin`), а повышение прав — через sudo. Так в логах видно, кто что
   делал.
 
 `sed` заменяет **закомментированные значения по умолчанию** из

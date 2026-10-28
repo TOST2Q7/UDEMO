@@ -22,8 +22,8 @@ DOCKER_FQDN="docker.tkhis.pro"
 ISP_USER="root"
 ISP_HOST="172.16.1.1"
 
-HQCLI_USER="sshuser"
-HQCLI_PORT=2027
+HQCLI_USER="userssh"
+HQCLI_PORT=2127
 # HQ-CLI gets a random address from HQ-RTR's DHCP pool, so the script
 # asks for it at the end; run "HQCLI_HOST=x.x.x.x ./gost.sh" to skip the question
 HQCLI_HOST="${HQCLI_HOST:-}"

@@ -14,22 +14,22 @@ echo "Configuring SSH"
 
 hostnamectl set-hostname br-srv.tkhis.pro
 
-# Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
-useradd -u 2027 -m sshuser
+# Create user userssh with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
+useradd -u 2027 -m userssh
 
 # Set password P@ssw0rd (no confirmation)
-echo "sshuser:P@ssw0rd" | chpasswd
+echo "userssh:P@ssw0rd" | chpasswd
 
 # Add to group wheel
-gpasswd -a sshuser wheel
+gpasswd -a userssh wheel
 
 # Configure passwordless sudo
-echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+echo "userssh ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Configure SSH
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+sed -i 's/#Port 22/Port 2127/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
-echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
+echo "AllowUsers userssh" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 
@@ -41,8 +41,8 @@ systemctl enable --now sshd
 systemctl restart sshd
 
 echo "Configuration complete:"
-echo "- User: sshuser (password: P@ssw0rd)"
-echo "- SSH port: 2027"
+echo "- User: userssh (password: P@ssw0rd)"
+echo "- SSH port: 2127"
 echo "- Root login disabled"
 echo "- Banner created"
 
@@ -71,12 +71,12 @@ check() {
 : > "$LOG"
 echo "=== Checking br-srv configuration ===" | tee -a "$LOG"
 check "Hostname = br-srv.tkhis.pro"              '[ "$(hostnamectl --static)" = "br-srv.tkhis.pro" ]'
-check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
-check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
-check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
-check "SSH port changed to 2027"                    'grep -q "^Port 2027" /etc/openssh/sshd_config'
+check "User userssh created (UID 2027)"             '[ "$(id -u userssh)" = "2027" ]'
+check "userssh is in group wheel"                   'id -nG userssh | grep -qw wheel'
+check "userssh added to sudoers"                    'grep -q "userssh ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
+check "SSH port changed to 2127"                    'grep -q "^Port 2127" /etc/openssh/sshd_config'
 check "SSH root login disabled"                     'grep -q "^PermitRootLogin no" /etc/openssh/sshd_config'
-check "AllowUsers sshuser configured"               'grep -q "^AllowUsers sshuser" /etc/openssh/sshd_config'
+check "AllowUsers userssh configured"               'grep -q "^AllowUsers userssh" /etc/openssh/sshd_config'
 check "MaxAuthTries 2 configured"                   'grep -q "^MaxAuthTries 2" /etc/openssh/sshd_config'
 check "SSH banner created"                          '[ -f /etc/openssh/banner ]'
 check "SSH service active"                          'systemctl is-active --quiet sshd'
@@ -177,14 +177,14 @@ rm -f "$SELF"
 # Ping SSH so ansible can work
 apt-get install sshpass -y
 
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.100.1
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 net_admin@192.168.0.1
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.100.2
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2027 sshuser@192.168.0.2
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.100.1
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.0.1
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.100.2
+sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.0.2
 
 # --- Connect to the host with a dynamic IP (DHCP pool 192.168.200.2-192.168.200.6) ---
-PORT=2027
-USER=sshuser
+PORT=2127
+USER=userssh
 SUBNET=192.168.200
 TIMEOUT=3
 FOUND_IP=""

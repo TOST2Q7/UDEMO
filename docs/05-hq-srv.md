@@ -5,7 +5,7 @@
 * **DNS-сервер всего стенда** (dnsmasq) — зона `tkhis.pro`;
 * **файловое хранилище**: программный RAID 5 из трёх дисков, раздаваемый по
   **NFS** клиентам;
-* SSH-доступ для `sshuser`;
+* SSH-доступ для `userssh`;
 * позже — **веб-сайт** на Apache + PHP + MariaDB (`web.sh`, см.
   [09-web-services.md](09-web-services.md));
 * позже — **удостоверяющий центр (УЦ)** для ГОСТ-сертификатов
@@ -146,16 +146,16 @@ DC пересылает всё чужое обратно на HQ-SRV (`dns forwa
 отвечает сам (или NXDOMAIN), а HQ-SRV отвечает на свои `address=` локально,
 не пересылая.
 
-## 3. SSH и пользователь `sshuser`
+## 3. SSH и пользователь `userssh`
 
 ```bash
-useradd -u 2027 -m sshuser
-echo "sshuser:P@ssw0rd" | chpasswd
-gpasswd -a sshuser wheel
-echo "sshuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-sed -i 's/#Port 22/Port 2027/' /etc/openssh/sshd_config
+useradd -u 2027 -m userssh
+echo "userssh:P@ssw0rd" | chpasswd
+gpasswd -a userssh wheel
+echo "userssh ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+sed -i 's/#Port 22/Port 2127/' /etc/openssh/sshd_config
 sed -i 's/#PermitRootLogin without-password/PermitRootLogin no/' /etc/openssh/sshd_config
-echo "AllowUsers sshuser" >> /etc/openssh/sshd_config
+echo "AllowUsers userssh" >> /etc/openssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/openssh/sshd_config
 echo "Banner /etc/openssh/banner" >> /etc/openssh/sshd_config
 echo "Authorized access only" > /etc/openssh/banner
@@ -163,13 +163,13 @@ systemctl restart sshd
 ```
 
 Базовые элементы (пользователь, wheel, sudo, порт, root) — как у
-`net_admin` на маршрутизаторах ([03-hq-rtr.md §1.9](03-hq-rtr.md#19-пользователь-net_admin)).
+`admin` на маршрутизаторах ([03-hq-rtr.md §1.9](03-hq-rtr.md#19-пользователь-admin)).
 Серверная специфика:
 
 | Настройка | Зачем |
 |---|---|
 | `-u 2027` | фиксированный UID — **требование задания**. Практически одинаковый UID на всех серверах важен для NFS: права на файлы в NFS передаются числами, и одинаковый UID означает «тот же пользователь» на разных машинах |
-| `AllowUsers sshuser` | белый список: войти по SSH может **только** этот пользователь, даже если на сервере есть другие с паролями |
+| `AllowUsers userssh` | белый список: войти по SSH может **только** этот пользователь, даже если на сервере есть другие с паролями |
 | `MaxAuthTries 2` | после двух неверных попыток соединение рвётся — замедляет подбор пароля |
 | `Banner` | текст до ввода пароля; юридическое предупреждение «доступ только для авторизованных» |
 

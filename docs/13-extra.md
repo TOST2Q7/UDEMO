@@ -53,13 +53,13 @@ Windows бывает с `\r` в конце строк, поэтому прове
 ```bash
 apt-get install -y fail2ban python3-module-systemd
 sed -i 's/before = paths-altlinux.conf/before = paths-altlinux-systemd.conf/' "$JAIL"
-# [sshd]: enabled = true, port = 2027, maxretry = 3, findtime = 10m, bantime = 1m
+# [sshd]: enabled = true, port = 2127, maxretry = 3, findtime = 10m, bantime = 1m
 ```
 
 * **`paths-altlinux-systemd.conf`** и **`python3-module-systemd`** — в ALT
   sshd пишет в журнал systemd, а не в файл. С этим набором путей fail2ban
   читает журнал, иначе он не увидел бы ни одной неудачной попытки входа.
-* **Секция `[sshd]`** в `jail.conf` включается и получает порт `2027`
+* **Секция `[sshd]`** в `jail.conf` включается и получает порт `2127`
   (SSH стенда работает не на 22) и лимиты: 3 неудачные попытки за
   10 минут → бан адреса на 1 минуту.
 * Правки секции обёрнуты в `if ! … grep -qx "enabled = true"`: при
@@ -70,7 +70,7 @@ sed -i 's/before = paths-altlinux.conf/before = paths-altlinux-systemd.conf/' "$
 ждёт, пока jail поднимется после рестарта).
 
 **Как показать работу.** С другой машины трижды ввести неверный пароль:
-`ssh -p 2027 sshuser@192.168.100.2`. На HQ-SRV `fail2ban-client status sshd`
+`ssh -p 2127 userssh@192.168.100.2`. На HQ-SRV `fail2ban-client status sshd`
 покажет адрес в списке заблокированных, через минуту он оттуда уйдёт.
 
 ## 3. `cups.sh` — принт-сервер
