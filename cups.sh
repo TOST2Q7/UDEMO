@@ -83,7 +83,7 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e " The print server is up. ${YELLOW}lpstat -p${NC} here shows the printer name;"
     echo -e " on HQ-CLI add it as:"
-    echo -e "   ipp://hq-srv.au-team.irpo:631/printers/<name>"
+    echo -e "   ipp://hq-srv.tkhis.pro:631/printers/<name>"
     echo -e "${CYAN}============================================================${NC}"
     echo
 }

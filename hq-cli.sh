@@ -35,7 +35,7 @@ systemctl restart chronyd
 # Give the first sync up to ~30 s so the check below sees it
 chronyc waitsync 15 0 0 2 >/dev/null
 
-hostnamectl set-hostname hq-cli.au-team.irpo
+hostnamectl set-hostname hq-cli.tkhis.pro
 
 # Mount NFS share
 mkdir /mnt/nfs
@@ -110,7 +110,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking hq-cli configuration (VLAN 200 on $IFACE) ===" | tee -a "$LOG"
-check "Hostname = hq-cli.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-cli.au-team.irpo" ]'
+check "Hostname = hq-cli.tkhis.pro"              '[ "$(hostnamectl --static)" = "hq-cli.tkhis.pro" ]'
 check "VLAN 200 address from DHCP on $IFACE"        "ip -4 addr show $IFACE | grep -q 'inet 192.168.200\.'"
 check "Default route via HQ-RTR (192.168.200.1)"    'ip route get 77.88.8.8 | grep -q "via 192.168.200.1 "'
 check "tzdata installed"                            'rpm -q tzdata'

@@ -12,7 +12,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 
 echo "Configuring SSH"
 
-hostnamectl set-hostname br-srv.au-team.irpo
+hostnamectl set-hostname br-srv.tkhis.pro
 
 # Create user sshuser with UID 2027 (CHANGE NAME ETC DEPENDING ON THE TASK)
 useradd -u 2027 -m sshuser
@@ -70,7 +70,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking br-srv configuration ===" | tee -a "$LOG"
-check "Hostname = br-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "br-srv.au-team.irpo" ]'
+check "Hostname = br-srv.tkhis.pro"              '[ "$(hostnamectl --static)" = "br-srv.tkhis.pro" ]'
 check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
 check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
 check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'
@@ -120,11 +120,11 @@ chronyc waitsync 15 0 0 2 >/dev/null
 # ===========================================================
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 192.168.100.2, search tkhis.pro" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search tkhis.pro" /etc/net/ifaces/enp7s1/resolv.conf'
 check "ansible installed"                           'command -v ansible'
 check "sshpass installed"                           'command -v sshpass'
 check "inventory.yml downloaded"                    '[ -s /etc/ansible/inventory.yml ]'
@@ -143,7 +143,7 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e "${CYAN} NEXT STEP${NC}"
     echo -e "${CYAN}============================================================${NC}"
-    echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for au-team.irpo."
+    echo -e " Next on this host: ${YELLOW}samba.sh${NC} - the domain controller for tkhis.pro."
     echo -e " Then, also on this host: ${YELLOW}docker.sh${NC} (testapp + MariaDB from the exam ISO)."
     echo -e " Use /etc/ansible/inventory.yml here to manage the lab with Ansible."
     echo -e "${CYAN}============================================================${NC}"

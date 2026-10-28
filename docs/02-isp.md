@@ -20,7 +20,7 @@
 ## 1. Имя хоста
 
 ```bash
-hostnamectl set-hostname isp.au-team.irpo
+hostnamectl set-hostname isp.tkhis.pro
 ```
 
 Задаётся **полное доменное имя (FQDN)**, а не просто `isp`. Требование

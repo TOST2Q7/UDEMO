@@ -122,7 +122,7 @@ systemctl enable --now iptables
 |---|---|---|
 | ответы на уже открытые соединения | всё (`ESTABLISHED,RELATED`) | чтобы работали ответы в обе стороны |
 | LAN → наружу | всё | BR-SRV ходит в интернет (`apt-get`), к HQ (Ansible, DNS HQ-SRV), к ISP (NTP) |
-| внутренние сети → LAN | всё | вход HQ-CLI в домен Samba, пересылка DNS `au-team.irpo` с HQ-SRV на BR-SRV, SSH из HQ |
+| внутренние сети → LAN | всё | вход HQ-CLI в домен Samba, пересылка DNS `tkhis.pro` с HQ-SRV на BR-SRV, SSH из HQ |
 | интернет → LAN | ping, http/https, dns, ntp | требование задания |
 | интернет → BR-SRV | tcp `2027`, `8080` | проброс с BR-RTR: SSH и testapp (через прокси на ISP) |
 | остальное из интернета | запрещено (`-P FORWARD DROP`) | требование задания |

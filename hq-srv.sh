@@ -65,7 +65,7 @@ elif ! getent hosts raw.githubusercontent.com &>/dev/null; then
 fi
 echo -e "\033[0;32m[OK] Gateway, internet and DNS work\033[0m"
 
-hostnamectl set-hostname hq-srv.au-team.irpo
+hostnamectl set-hostname hq-srv.tkhis.pro
 
 # Install wget
 apt-get update && apt-get install -y wget
@@ -179,7 +179,7 @@ echo "- Configuring resolv.conf"
 chattr -i /etc/resolv.conf 2>/dev/null
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 127.0.0.1
-search au-team.irpo
+search tkhis.pro
 EOF
 # Scenario "the VM tags VLAN 100": enp7s1.100 still holds the temporary
 # 77.88.8.8 from setup and is the file etcnet applies
@@ -210,7 +210,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking hq-srv configuration (VLAN 100 on $IFACE) ===" | tee -a "$LOG"
-check "Hostname = hq-srv.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-srv.au-team.irpo" ]'
+check "Hostname = hq-srv.tkhis.pro"              '[ "$(hostnamectl --static)" = "hq-srv.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "Address 192.168.100.2/27 on $IFACE"          "ip -4 addr show $IFACE | grep -q 'inet 192.168.100.2/27'"
@@ -243,10 +243,10 @@ check "chronyd active"                              'systemctl is-active --quiet
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'
 check "Time synced from ISP (172.16.1.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.1.1 "'
-check "DNS on $IFACE: 127.0.0.1, search au-team.irpo" "grep -qx 'nameserver 127.0.0.1' /etc/net/ifaces/$IFACE/resolv.conf && grep -qx 'search au-team.irpo' /etc/net/ifaces/$IFACE/resolv.conf"
+check "DNS on $IFACE: 127.0.0.1, search tkhis.pro" "grep -qx 'nameserver 127.0.0.1' /etc/net/ifaces/$IFACE/resolv.conf && grep -qx 'search tkhis.pro' /etc/net/ifaces/$IFACE/resolv.conf"
 check "/etc/resolv.conf uses 127.0.0.1"             'grep -qx "nameserver 127.0.0.1" /etc/resolv.conf'
-check "Local DNS answers hq-srv.au-team.irpo"       'getent hosts hq-srv.au-team.irpo | grep -q "^192.168.100.2 "'
-check "Local DNS answers moodle/wiki (CNAME)"       'getent hosts moodle.au-team.irpo && getent hosts wiki.au-team.irpo'
+check "Local DNS answers hq-srv.tkhis.pro"       'getent hosts hq-srv.tkhis.pro | grep -q "^192.168.100.2 "'
+check "Local DNS answers moodle/wiki (CNAME)"       'getent hosts moodle.tkhis.pro && getent hosts wiki.tkhis.pro'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
@@ -279,11 +279,11 @@ next_step() {
     echo -e " Reason   : switches the DHCP-advertised DNS server from the"
     echo -e "            public resolver (77.88.8.8) to this host"
     echo -e "            (192.168.100.2), now that dnsmasq here is serving"
-    echo -e "            the au-team.irpo zone."
+    echo -e "            the tkhis.pro zone."
     echo
     echo -e " Later     : ${YELLOW}samba.sh${NC} goes on BR-SRV (the domain controller),"
-    echo -e "             after br-srv.sh. This host already forwards au-team.irpo"
-    echo -e "             to it (server=/au-team.irpo/192.168.0.2 in dnsmasq.conf),"
+    echo -e "             after br-srv.sh. This host already forwards tkhis.pro"
+    echo -e "             to it (server=/tkhis.pro/192.168.0.2 in dnsmasq.conf),"
     echo -e "             and the DC forwards everything else back here."
     echo
     echo -e " Also      : ${YELLOW}web.sh${NC} on this host (the site + MariaDB from the"

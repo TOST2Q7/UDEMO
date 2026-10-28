@@ -1,7 +1,7 @@
 # UDEMO — ветка `checks`
 
 Набор bash-скриптов, которые разворачивают учебный сетевой стенд компании
-`au-team.irpo` на ALT Linux: провайдер, два офиса с маршрутизаторами,
+`tkhis.pro` на ALT Linux: провайдер, два офиса с маршрутизаторами,
 межсетевой экран филиала (BR-FW),
 GRE + OSPF между ними, VLAN, DHCP, DNS, NTP, RAID + NFS, SSH, Ansible,
 домен Samba AD, сайт на LAMP и приложение в Docker за обратным прокси nginx,

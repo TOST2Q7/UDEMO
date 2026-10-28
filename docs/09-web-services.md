@@ -1,7 +1,7 @@
 # 09. Веб-сервисы — `web.sh`, `docker.sh`, `proxy.sh`
 
 **Задача этапа.** Поднять два веб-приложения и опубликовать их под
-именами `web.au-team.irpo` и `docker.au-team.irpo` через единый обратный
+именами `web.tkhis.pro` и `docker.tkhis.pro` через единый обратный
 прокси на ISP. Позже этот же прокси переводится на HTTPS
 ([10-gost.md](10-gost.md)).
 
@@ -9,7 +9,7 @@
 
 ```
 HQ-CLI (браузер)
-   │  http://web.au-team.irpo          /etc/hosts: web, docker → 172.16.1.1
+   │  http://web.tkhis.pro          /etc/hosts: web, docker → 172.16.1.1
    ▼
 ISP nginx :80 (позже :443)  ── proxy.sh / gost-isp.sh
    │  по имени сайта (заголовок Host / SNI) выбирает бэкенд

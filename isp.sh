@@ -11,7 +11,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 # ===========================================================
 
 # Set hostname
-hostnamectl set-hostname isp.au-team.irpo
+hostnamectl set-hostname isp.tkhis.pro
 
 # Set timezone (Alt JeOS can ship without the time zone database)
 apt-get update
@@ -134,7 +134,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking isp configuration ===" | tee -a "$LOG"
-check "Hostname = isp.au-team.irpo"                 '[ "$(hostnamectl --static)" = "isp.au-team.irpo" ]'
+check "Hostname = isp.tkhis.pro"                 '[ "$(hostnamectl --static)" = "isp.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "/etc/localtime -> Asia/Krasnoyarsk"          'readlink /etc/localtime | grep -q "Asia/Krasnoyarsk$"'
 check "Local time is UTC+7"                         '[ "$(date +%z)" = "+0700" ]'

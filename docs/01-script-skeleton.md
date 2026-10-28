@@ -107,7 +107,7 @@ check() {
 **Почему проверки пишутся в одинарных кавычках:**
 
 ```bash
-check "Hostname = isp.au-team.irpo" '[ "$(hostnamectl --static)" = "isp.au-team.irpo" ]'
+check "Hostname = isp.tkhis.pro" '[ "$(hostnamectl --static)" = "isp.tkhis.pro" ]'
 ```
 
 Одинарные кавычки не дают bash подставить `$(…)` в момент вызова `check` —

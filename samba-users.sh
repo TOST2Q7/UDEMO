@@ -33,7 +33,7 @@ csv_file="$1"
 # Create OU
 awk -F ';' 'NR>1 {print $5}' "$csv_file" | sort | uniq | while read ou;
 do
-	samba-tool ou add OU="$ou",DC=au-team,DC=irpo;
+	samba-tool ou add OU="$ou",DC=tkhis,DC=pro;
 done
 
 # Create Users

@@ -27,7 +27,7 @@ systemctl restart dnsmasq
 # ===========================================================
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
@@ -58,7 +58,7 @@ echo "=== Checking HQ-RTR-2 configuration ===" | tee -a "$LOG"
 check "dhcp-option=6 points to 192.168.100.2"       'grep -q "^dhcp-option=6,192.168.100.2$" /etc/dnsmasq.conf'
 check "Old value 77.88.8.8 no longer set"           '! grep -q "^dhcp-option=6,77.88.8.8$" /etc/dnsmasq.conf'
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 192.168.100.2, search tkhis.pro" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search tkhis.pro" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

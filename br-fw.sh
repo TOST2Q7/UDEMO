@@ -20,7 +20,7 @@ BR_SRV="192.168.0.2"
 FWD_PORTS="2027,8080"
 # ===========================================================
 
-hostnamectl set-hostname br-fw.au-team.irpo
+hostnamectl set-hostname br-fw.tkhis.pro
 
 # Enable routing
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
@@ -148,7 +148,7 @@ chronyc waitsync 15 0 0 2 >/dev/null
 # ===========================================================
 cat > /etc/net/ifaces/$WAN/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/$WAN/resolv.conf /etc/resolv.conf
 
@@ -183,7 +183,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking br-fw configuration ===" | tee -a "$LOG"
-check "Hostname = br-fw.au-team.irpo"               '[ "$(hostnamectl --static)" = "br-fw.au-team.irpo" ]'
+check "Hostname = br-fw.tkhis.pro"               '[ "$(hostnamectl --static)" = "br-fw.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
@@ -212,7 +212,7 @@ check "chronyd active"                              'systemctl is-active --quiet
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 iburst" /etc/chrony.conf'
 check "Time synced from ISP (172.16.2.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.2.1 "'
-check "DNS on $WAN: 192.168.100.2, search au-team.irpo" "grep -qx 'nameserver 192.168.100.2' /etc/net/ifaces/$WAN/resolv.conf && grep -qx 'search au-team.irpo' /etc/net/ifaces/$WAN/resolv.conf"
+check "DNS on $WAN: 192.168.100.2, search tkhis.pro" "grep -qx 'nameserver 192.168.100.2' /etc/net/ifaces/$WAN/resolv.conf && grep -qx 'search tkhis.pro' /etc/net/ifaces/$WAN/resolv.conf"
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

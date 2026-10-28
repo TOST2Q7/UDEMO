@@ -9,7 +9,7 @@ LOG="$DIR/${NAME%.sh}-check.log"
 NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
-# Runs on BR-SRV. ISP proxies docker.au-team.irpo to BR-RTR:8080,
+# Runs on BR-SRV. ISP proxies docker.tkhis.pro to BR-RTR:8080,
 # which br-rtr.sh forwards here
 ISO_DEV="/dev/sr0"
 ISO_MNT="/mnt"
@@ -154,7 +154,7 @@ next_step() {
     echo -e " testapp is up on this host, port $APP_PORT."
     echo -e " BR-RTR forwards 172.16.2.2:$APP_PORT here. Once ${YELLOW}web.sh${NC} has run"
     echo -e " on HQ-SRV too, run ${YELLOW}proxy.sh${NC} on ISP (the nginx reverse proxy for"
-    echo -e " web.au-team.irpo and docker.au-team.irpo). isp.sh pre-fetched it;"
+    echo -e " web.tkhis.pro and docker.tkhis.pro). isp.sh pre-fetched it;"
     echo -e " if it is not there:"
     echo -e "   wget -O proxy.sh $(dirname "$RAW_URL")/proxy.sh && bash proxy.sh"
     echo -e " Manage the stack with:"

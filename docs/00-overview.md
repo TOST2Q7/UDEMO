@@ -20,8 +20,8 @@
   связываются друг с другом; она же — сервер точного времени и обратный
   прокси для веб-сервисов компании.
 
-Все имена узлов живут в DNS-домене **`au-team.irpo`**, а на BR-SRV
-поднимается домен Active Directory **`AU-TEAM.IRPO`** (Samba).
+Все имена узлов живут в DNS-домене **`tkhis.pro`**, а на BR-SRV
+поднимается домен Active Directory **`TKHIS.PRO`** (Samba).
 
 Набор задач (VLAN, GRE, OSPF, DHCP, DNS, NTP, RAID, NFS, SSH на нестандартном
 порту, Samba AD, Ansible, веб-сайт на LAMP, Docker, обратный прокси nginx,
@@ -42,7 +42,7 @@
                            enp7s1
                       ┌───────────────┐
                       │      ISP      │  NAT (MASQUERADE) наружу, NTP (chrony),
-                      │ isp.au-team.. │  nginx reverse-proxy (HTTP → HTTPS/ГОСТ)
+                      │ isp.tkhis.pro │  nginx reverse-proxy (HTTP → HTTPS/ГОСТ)
                       └──┬─────────┬──┘
               enp7s2     │         │     enp7s3
          172.16.1.1/28   │         │   172.16.2.1/28
@@ -198,13 +198,13 @@ etcnet при старте прочитает те же файлы и восст
 # the public resolver
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 ```
 
 Итоговая цель — чтобы **все узлы стенда использовали один внутренний DNS**
-на HQ-SRV (`192.168.100.2`), который знает имена `*.au-team.irpo`. Но во
+на HQ-SRV (`192.168.100.2`), который знает имена `*.tkhis.pro`. Но во
 время работы скрипта ещё нужно скачивать пакеты, а внутренний DNS может быть
 ещё не поднят (например, `hq-rtr.sh` запускается раньше `hq-srv.sh`). Если
 переключить DNS в начале, все следующие `apt-get install` упадут на
@@ -221,8 +221,8 @@ cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 * `cp … /etc/resolv.conf` — **немедленное** применение без рестарта сети
   (рестарт мог бы, например, оборвать SSH-сессию, из которой запущен скрипт).
 
-`search au-team.irpo` позволяет обращаться к узлам по короткому имени:
-`ping hq-srv` превратится в `hq-srv.au-team.irpo`.
+`search tkhis.pro` позволяет обращаться к узлам по короткому имени:
+`ping hq-srv` превратится в `hq-srv.tkhis.pro`.
 
 Исключения:
 

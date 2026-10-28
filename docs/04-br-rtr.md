@@ -23,7 +23,7 @@ HQ-RTR, снаружи пробрасываются SSH и порт веб-пр�
 ## 1. Имя хоста, `shadow-groups`, forwarding
 
 ```bash
-hostnamectl set-hostname br-rtr.au-team.irpo
+hostnamectl set-hostname br-rtr.tkhis.pro
 apt-get install -y shadow-groups
 sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
 ```
@@ -119,7 +119,7 @@ systemctl enable --now iptables
 
 **Проброс 8080.** Второе DNAT-правило устроено так же и ведёт на
 контейнер `testapp` на BR-SRV (`docker.sh`), порт 8080 → 8080. Через него
-обратный прокси на ISP достаёт до `docker.au-team.irpo`
+обратный прокси на ISP достаёт до `docker.tkhis.pro`
 ([09-web-services.md](09-web-services.md)).
 
 ## 7. Синхронизация времени

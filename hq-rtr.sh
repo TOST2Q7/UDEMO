@@ -16,7 +16,7 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 VLAN_MODE="${VLAN_MODE:-}"
 # ===========================================================
 
-hostnamectl set-hostname hq-rtr.au-team.irpo
+hostnamectl set-hostname hq-rtr.tkhis.pro
 
 # Install gpasswd
 apt-get install shadow-groups -y
@@ -68,11 +68,11 @@ systemctl restart network
 apt-get update && apt-get install -y dnsmasq
 cat > /etc/dnsmasq.conf <<EOF
 no-resolv
-domain=au-team.irpo
+domain=tkhis.pro
 dhcp-range=192.168.200.2,192.168.200.10,999h
 dhcp-option=3,192.168.200.1
 dhcp-option=6,77.88.8.8
-dhcp-option=15,au-team.irpo
+dhcp-option=15,tkhis.pro
 interface=enp7s2.200
 EOF
 
@@ -219,7 +219,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking hq-rtr configuration ===" | tee -a "$LOG"
-check "Hostname = hq-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "hq-rtr.au-team.irpo" ]'
+check "Hostname = hq-rtr.tkhis.pro"              '[ "$(hostnamectl --static)" = "hq-rtr.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'

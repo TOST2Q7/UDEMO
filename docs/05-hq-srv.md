@@ -2,7 +2,7 @@
 
 **Роль узла.** Главный сервер головного офиса:
 
-* **DNS-сервер всего стенда** (dnsmasq) — зона `au-team.irpo`;
+* **DNS-сервер всего стенда** (dnsmasq) — зона `tkhis.pro`;
 * **файловое хранилище**: программный RAID 0 из трёх дисков, раздаваемый по
   **NFS** клиентам;
 * SSH-доступ для `sshuser`;
@@ -41,7 +41,7 @@ Proxmox тегирует (`VLAN Tag = 100`, адрес `192.168.100.2/27` пря
 ## 1. Имя хоста, wget
 
 ```bash
-hostnamectl set-hostname hq-srv.au-team.irpo
+hostnamectl set-hostname hq-srv.tkhis.pro
 apt-get update && apt-get install -y wget
 ```
 
@@ -79,9 +79,9 @@ systemctl restart dnsmasq
 | `domain-needed` | не пересылать наружу запросы коротких имён без точки | `hq-srv` без домена не должен уходить в интернет-DNS |
 | `bogus-priv` | не пересылать наружу обратные запросы для частных сетей | PTR для `192.168.x.x` в интернете бессмысленны и «светят» внутреннюю адресацию |
 | `no-resolv` | не брать upstream из `/etc/resolv.conf` | сам HQ-SRV смотрит в `127.0.0.1` — иначе dnsmasq пересылал бы запросы сам себе |
-| `domain=au-team.irpo` | локальный домен | для `expand-hosts` и DHCP (если бы был) |
+| `domain=tkhis.pro` | локальный домен | для `expand-hosts` и DHCP (если бы был) |
 | `server=77.88.8.8` | upstream для всех внешних имён | публичный Яндекс.DNS; так весь стенд получает интернет-имена через один сервер |
-| `server=/au-team.irpo/192.168.0.2` | всё про `au-team.irpo`, чего нет локально, — спрашивать у BR-SRV | там Samba AD DC; только он знает служебные записи домена (`_ldap._tcp`, `_kerberos._tcp`, …), нужные для ввода машин в домен |
+| `server=/tkhis.pro/192.168.0.2` | всё про `tkhis.pro`, чего нет локально, — спрашивать у BR-SRV | там Samba AD DC; только он знает служебные записи домена (`_ldap._tcp`, `_kerberos._tcp`, …), нужные для ввода машин в домен |
 | `listen-address=127.0.0.1,192.168.100.2` | слушать loopback (для себя) и LAN-адрес (для остальных) | не отвечать на других адресах |
 | `interface=*` | все интерфейсы | в сочетании с `listen-address` фактически ограничение задаёт именно он |
 | `expand-hosts` | к коротким именам из `/etc/hosts` добавлять домен | имя из `/etc/hosts` станет доступно и как FQDN (строка дублируется ниже по файлу — на поведение не влияет) |
@@ -91,24 +91,24 @@ systemctl restart dnsmasq
 **Записи зоны:**
 
 ```
-host-record=hq-rtr.au-team.irpo,192.168.100.1
-cname=moodle.au-team.irpo,hq-rtr.au-team.irpo
-cname=wiki.au-team.irpo,hq-rtr.au-team.irpo
+host-record=hq-rtr.tkhis.pro,192.168.100.1
+cname=moodle.tkhis.pro,hq-rtr.tkhis.pro
+cname=wiki.tkhis.pro,hq-rtr.tkhis.pro
 
-address=/br-rtr.au-team.irpo/192.168.1.1
-ptr-record=1.1.168.192.in-addr.arpa,br-rtr.au-team.irpo
-address=/br-fw.au-team.irpo/192.168.0.1
-ptr-record=1.0.168.192.in-addr.arpa,br-fw.au-team.irpo
-address=/hq-srv.au-team.irpo/192.168.100.2
-ptr-record=2.100.168.192.in-addr.arpa,hq-srv.au-team.irpo
-address=/br-srv.au-team.irpo/192.168.0.2
-ptr-record=2.0.168.192.in-addr.arpa,br-srv.au-team.irpo
-address=/hq-cli.au-team.irpo/192.168.200.2
-ptr-record=2.200.168.192.in-addr.arpa,hq-cli.au-team.irpo
-address=/web.au-team.irpo/172.16.1.1
-ptr-record=1.1.16.172.in-addr.arpa,web.au-team.irpo
-address=/docker.au-team.irpo/172.16.2.1
-ptr-record=1.2.16.172.in-addr.arpa,docker.au-team.irpo
+address=/br-rtr.tkhis.pro/192.168.1.1
+ptr-record=1.1.168.192.in-addr.arpa,br-rtr.tkhis.pro
+address=/br-fw.tkhis.pro/192.168.0.1
+ptr-record=1.0.168.192.in-addr.arpa,br-fw.tkhis.pro
+address=/hq-srv.tkhis.pro/192.168.100.2
+ptr-record=2.100.168.192.in-addr.arpa,hq-srv.tkhis.pro
+address=/br-srv.tkhis.pro/192.168.0.2
+ptr-record=2.0.168.192.in-addr.arpa,br-srv.tkhis.pro
+address=/hq-cli.tkhis.pro/192.168.200.2
+ptr-record=2.200.168.192.in-addr.arpa,hq-cli.tkhis.pro
+address=/web.tkhis.pro/172.16.1.1
+ptr-record=1.1.16.172.in-addr.arpa,web.tkhis.pro
+address=/docker.tkhis.pro/172.16.2.1
+ptr-record=1.2.16.172.in-addr.arpa,docker.tkhis.pro
 ```
 
 * **`br-rtr` → `192.168.1.1`, `br-fw` → `192.168.0.1`.** Адрес
@@ -147,7 +147,7 @@ DNS**, а сканируют пул.
 **Взаимодействие с Samba.** HQ-SRV — «главный» DNS, BR-SRV (DC) —
 авторитет по AD-записям. HQ-SRV пересылает незнакомые имена домена на DC;
 DC пересылает всё чужое обратно на HQ-SRV (`dns forwarder=192.168.100.2` в
-`samba.sh`). Цикла не возникает: DC авторитетен для `au-team.irpo` и
+`samba.sh`). Цикла не возникает: DC авторитетен для `tkhis.pro` и
 отвечает сам (или NXDOMAIN), а HQ-SRV отвечает на свои `address=` локально,
 не пересылая.
 
@@ -257,7 +257,7 @@ chrony-клиент с сервером `172.16.1.1` (ISP) — см.
 chattr -i /etc/resolv.conf 2>/dev/null
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 127.0.0.1
-search au-team.irpo
+search tkhis.pro
 EOF
 [ -d /etc/net/ifaces/enp7s1.100 ] && cp … /etc/net/ifaces/enp7s1.100/resolv.conf
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
@@ -282,10 +282,10 @@ cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 |---|---|
 | `RAID array /dev/md0 exists` → `grep "^md0 :" /proc/mdstat` | ядро видит собранный массив |
 | `/raid is mounted` → `mountpoint -q` | именно точка монтирования, а не просто каталог |
-| `Local DNS answers hq-srv.au-team.irpo` → `getent hosts … \| grep "^192.168.100.2 "` | сквозная проверка: resolv.conf → dnsmasq → правильный ответ. `getent` идёт через NSS, как обычные программы |
+| `Local DNS answers hq-srv.tkhis.pro` → `getent hosts … \| grep "^192.168.100.2 "` | сквозная проверка: resolv.conf → dnsmasq → правильный ответ. `getent` идёт через NSS, как обычные программы |
 | `Local DNS answers moodle/wiki (CNAME)` | CNAME-ы реально разрешаются |
 | `Default route via HQ-RTR` / `Internet reachable` | после всех рестартов сервер по-прежнему выходит в интернет через `192.168.100.1` |
-| `Internet names resolve via dnsmasq` | внешние имена идут через свой dnsmasq (`server=77.88.8.8`), а не только зона `au-team.irpo` |
+| `Internet names resolve via dnsmasq` | внешние имена идут через свой dnsmasq (`server=77.88.8.8`), а не только зона `tkhis.pro` |
 
 ## 9. NEXT STEP
 

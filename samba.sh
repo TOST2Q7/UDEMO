@@ -27,8 +27,8 @@ rm -rf /var/cache/samba
 mkdir -p /var/lib/samba/sysvol
 
 samba-tool domain provision \
-  --realm="AU-TEAM.IRPO" \
-  --domain="AU-TEAM" \
+  --realm="TKHIS.PRO" \
+  --domain="TKHIS" \
   --server-role="dc" \
   --dns-backend="SAMBA_INTERNAL" \
   --option="dns forwarder=192.168.100.2" \
@@ -41,13 +41,13 @@ systemctl enable --now samba
 systemctl restart samba
 
 cat > "/etc/net/ifaces/enp7s1/resolv.conf" <<EOF
-search au-team.irpo
+search tkhis.pro
 nameserver 127.0.0.1
 EOF
 
 systemctl restart network
 
-echo "P@ssw0rd" | kinit Administrator@AU-TEAM.IRPO
+echo "P@ssw0rd" | kinit Administrator@TKHIS.PRO
 
 samba-tool group add hq
 
@@ -70,7 +70,7 @@ systemctl restart chronyd
 # ===========================================================
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
@@ -100,7 +100,7 @@ check() {
 echo "=== Checking samba-dc configuration ===" | tee -a "$LOG"
 check "Samba service active"                        'systemctl is-active --quiet samba'
 check "Samba service enabled at boot"               'systemctl is-enabled --quiet samba'
-check "Domain AU-TEAM.IRPO created"                 'samba-tool domain info 127.0.0.1'
+check "Domain TKHIS.PRO created"                 'samba-tool domain info 127.0.0.1'
 check "/etc/krb5.conf copied"                       '[ -s /etc/krb5.conf ]'
 check "Group hq created"                            'samba-tool group list | grep -qw hq'
 for i in 1 2 3 4 5; do
@@ -108,7 +108,7 @@ for i in 1 2 3 4 5; do
 done
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chrony.conf points to 172.16.2.1"            'grep -q "^server 172.16.2.1 iburst" /etc/chrony.conf'
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 192.168.100.2, search tkhis.pro" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search tkhis.pro" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

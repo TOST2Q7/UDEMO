@@ -9,8 +9,8 @@ LOG="$DIR/${NAME%.sh}-check.log"
 NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME"
 
-WEB_FQDN="web.au-team.irpo"
-DOCKER_FQDN="docker.au-team.irpo"
+WEB_FQDN="web.tkhis.pro"
+DOCKER_FQDN="docker.tkhis.pro"
 HQCLI_USER="sshuser"
 ANCHOR="/etc/pki/ca-trust/source/anchors/ca.cer"
 # nginx reverse proxy on ISP, reachable from here through HQ-RTR

@@ -1,7 +1,7 @@
 # 08. Samba AD DC — `samba.sh` (на BR-SRV)
 
 **Роль.** Превращает BR-SRV в **контроллер домена Active Directory**
-`AU-TEAM.IRPO` на базе Samba. Это централизованная база пользователей и
+`TKHIS.PRO` на базе Samba. Это централизованная база пользователей и
 групп: вместо локальных учёток на каждой машине — одна доменная учётка,
 которой можно входить на любой машине домена.
 
@@ -66,8 +66,8 @@ mkdir -p /var/lib/samba/sysvol
 
 ```bash
 samba-tool domain provision \
-  --realm="AU-TEAM.IRPO" \
-  --domain="AU-TEAM" \
+  --realm="TKHIS.PRO" \
+  --domain="TKHIS" \
   --server-role="dc" \
   --dns-backend="SAMBA_INTERNAL" \
   --option="dns forwarder=192.168.100.2" \
@@ -76,8 +76,8 @@ samba-tool domain provision \
 
 | Параметр | Смысл | Почему так |
 |---|---|---|
-| `--realm=AU-TEAM.IRPO` | Kerberos-realm = DNS-имя домена заглавными | по соглашению AD realm совпадает с DNS-доменом `au-team.irpo`, которым уже пользуется весь стенд |
-| `--domain=AU-TEAM` | NetBIOS-имя домена (короткое, до 15 символов) | для совместимости со старыми клиентами и форм входа `AU-TEAM\user` |
+| `--realm=TKHIS.PRO` | Kerberos-realm = DNS-имя домена заглавными | по соглашению AD realm совпадает с DNS-доменом `tkhis.pro`, которым уже пользуется весь стенд |
+| `--domain=TKHIS` | NetBIOS-имя домена (короткое, до 15 символов) | для совместимости со старыми клиентами и форм входа `TKHIS\user` |
 | `--server-role=dc` | контроллер домена | а не рядовой участник или отдельный сервер |
 | `--dns-backend=SAMBA_INTERNAL` | встроенный DNS Samba | не нужен отдельный BIND; AD **обязан** иметь DNS для своих SRV-записей, и встроенный вариант — самый простой |
 | `dns forwarder=192.168.100.2` | всё, что не в зоне AD, пересылать на HQ-SRV | так DC продолжает резолвить и внутренние записи dnsmasq, и интернет |
@@ -93,7 +93,7 @@ systemctl restart samba
 
 Провижининг генерирует правильный `krb5.conf` для нового realm-а. Его нужно
 положить в `/etc/krb5.conf`, иначе системные Kerberos-утилиты (`kinit`) не
-будут знать, где KDC для `AU-TEAM.IRPO`.
+будут знать, где KDC для `TKHIS.PRO`.
 
 `/bin/cp -f` — вызов бинарника по полному пути в обход возможного алиаса
 `cp -i`, который спросил бы подтверждение перезаписи.
@@ -102,15 +102,15 @@ systemctl restart samba
 
 ```bash
 cat > "/etc/net/ifaces/enp7s1/resolv.conf" <<EOF
-search au-team.irpo
+search tkhis.pro
 nameserver 127.0.0.1
 EOF
 systemctl restart network
-echo "P@ssw0rd" | kinit Administrator@AU-TEAM.IRPO
+echo "P@ssw0rd" | kinit Administrator@TKHIS.PRO
 ```
 
 `kinit` должен найти KDC домена через DNS (SRV-запись
-`_kerberos._udp.au-team.irpo`), а её сейчас знает только сам DC. Поэтому на
+`_kerberos._udp.tkhis.pro`), а её сейчас знает только сам DC. Поэтому на
 время административных операций сервер смотрит в собственный DNS.
 `kinit` получает Kerberos-билет администратора — после этого `samba-tool`
 может выполнять изменения в домене. Пароль подаётся через stdin, чтобы не
@@ -165,7 +165,7 @@ DC должен иметь точное время, которое затем и
 ```bash
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 ```
@@ -175,7 +175,7 @@ cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 ```
 любой узел ─► HQ-SRV (dnsmasq)
                 ├─ свои записи (hq-srv, br-rtr, …)       → отвечает сам
-                ├─ прочие *.au-team.irpo (SRV AD и т.п.)  → BR-SRV (Samba DNS)
+                ├─ прочие *.tkhis.pro (SRV AD и т.п.)  → BR-SRV (Samba DNS)
                 └─ всё остальное                           → 77.88.8.8
 BR-SRV (Samba DNS) ─ не своя зона ─► HQ-SRV
 ```

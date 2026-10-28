@@ -11,8 +11,8 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 
 # Runs on ISP. Plain-HTTP reverse proxy; gost-isp.sh later rewrites
 # the same vhost file for HTTPS and reuses the same .htpasswd
-WEB_FQDN="web.au-team.irpo"
-DOCKER_FQDN="docker.au-team.irpo"
+WEB_FQDN="web.tkhis.pro"
+DOCKER_FQDN="docker.tkhis.pro"
 # web.sh on HQ-SRV, reached through HQ-RTR's DNAT
 WEB_BACKEND="172.16.1.2:8080"
 # docker.sh on BR-SRV, reached through BR-RTR's DNAT

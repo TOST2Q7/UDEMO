@@ -14,10 +14,10 @@ DAYS=30
 
 CA_KEY="$CA_DIR/ca.key"
 CA_CER="$CA_DIR/ca.cer"
-CA_SUBJ="/C=RU/O=au-team.irpo/CN=hq-srv.au-team.irpo"
+CA_SUBJ="/C=RU/O=tkhis.pro/CN=hq-srv.tkhis.pro"
 
-WEB_FQDN="web.au-team.irpo"
-DOCKER_FQDN="docker.au-team.irpo"
+WEB_FQDN="web.tkhis.pro"
+DOCKER_FQDN="docker.tkhis.pro"
 
 ISP_USER="root"
 ISP_HOST="172.16.1.1"
@@ -60,12 +60,12 @@ chmod 600 "$WEB_FQDN.key" "$DOCKER_FQDN.key"
 # 3. CSRs, each with its own SAN - without it Chromium-based browsers
 #    reject the certificate even when the CN matches
 openssl req -new -md_gost12_256 -key "$WEB_FQDN.key" \
-    -subj "/C=RU/O=au-team.irpo/CN=$WEB_FQDN" \
+    -subj "/C=RU/O=tkhis.pro/CN=$WEB_FQDN" \
     -addext "subjectAltName=DNS:$WEB_FQDN" \
     -out "$WEB_FQDN.csr"
 
 openssl req -new -md_gost12_256 -key "$DOCKER_FQDN.key" \
-    -subj "/C=RU/O=au-team.irpo/CN=$DOCKER_FQDN" \
+    -subj "/C=RU/O=tkhis.pro/CN=$DOCKER_FQDN" \
     -addext "subjectAltName=DNS:$DOCKER_FQDN" \
     -out "$DOCKER_FQDN.csr"
 
@@ -94,7 +94,7 @@ echo "Certificates generated in $CA_DIR"
 chattr -i /etc/resolv.conf 2>/dev/null
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 127.0.0.1
-search au-team.irpo
+search tkhis.pro
 EOF
 [ -d /etc/net/ifaces/enp7s1.100 ] && cp /etc/net/ifaces/enp7s1/resolv.conf /etc/net/ifaces/enp7s1.100/resolv.conf
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
@@ -136,7 +136,7 @@ check "$DOCKER_FQDN key exists"                      "[ -s \"$CA_DIR/$DOCKER_FQD
 check "$DOCKER_FQDN certificate exists"              "[ -s \"$CA_DIR/$DOCKER_FQDN.cer\" ]"
 check "$DOCKER_FQDN certificate signed by our CA"    "openssl verify -CAfile \"$CA_CER\" \"$CA_DIR/$DOCKER_FQDN.cer\""
 check "$DOCKER_FQDN certificate has correct SAN"     "openssl x509 -in \"$CA_DIR/$DOCKER_FQDN.cer\" -noout -text | grep -q \"DNS:$DOCKER_FQDN\""
-check "DNS on enp7s1: 127.0.0.1, search au-team.irpo" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 127.0.0.1, search tkhis.pro" 'grep -qx "nameserver 127.0.0.1" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search tkhis.pro" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================

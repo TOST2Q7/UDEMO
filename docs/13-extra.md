@@ -32,7 +32,7 @@ EOF
 телефон, OU, улица, индекс, город, страна, пароль):
 
 1. **OU.** Пятый столбец без строки-заголовка (`NR>1`), уникальные
-   значения (`sort | uniq`) → `samba-tool ou add OU=<ou>,DC=au-team,DC=irpo`.
+   значения (`sort | uniq`) → `samba-tool ou add OU=<ou>,DC=tkhis,DC=pro`.
 2. **Пользователи.** Строка-заголовок (`First Name`) пропускается. Логин —
    `имя.фамилия` в нижнем регистре (`${firstName,,}`), пароль `P@ssw0rd1`,
    заполняются имя, фамилия, телефон и должность, пользователь кладётся в
@@ -94,7 +94,7 @@ cupsctl --share-printers --remote-any
 (`http://hq-srv:631`).
 
 **На HQ-CLI** принтер подключается как
-`ipp://hq-srv.au-team.irpo:631/printers/<имя>` — имя показывает `lpstat -p`
+`ipp://hq-srv.tkhis.pro:631/printers/<имя>` — имя показывает `lpstat -p`
 на HQ-SRV.
 
 ## 4. `atop.sh` — мониторинг
