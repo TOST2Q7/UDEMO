@@ -19,7 +19,7 @@
 | `enp7s2.100` | VLAN 100 — серверы | `192.168.100.1/27` |
 | `enp7s2.200` | VLAN 200 — клиенты | `192.168.200.1/28` |
 | `enp7s2.999` | VLAN 999 — управление | `192.168.99.1/29` |
-| `tun0` | GRE-туннель в BR-RTR | `10.10.10.1/30` |
+| `tun0` | GRE-туннель в BR-RTR | `10.10.10.1/24` |
 
 ---
 
@@ -153,7 +153,7 @@ TUNTTL=64
 TUNOPTIONS='ttl 64'
 HOST=enp7s1
 EOF
-echo "10.10.10.1/30" > /etc/net/ifaces/tun0/ipv4address
+echo "10.10.10.1/24" > /etc/net/ifaces/tun0/ipv4address
 modprobe gre
 systemctl restart network
 ```
@@ -177,7 +177,7 @@ multicast — а OSPF рассылает свои Hello именно на multic
 | `TUNTTL=64` / `TUNOPTIONS='ttl 64'` | TTL внешнего пакета. У GRE по умолчанию TTL «наследуется» от внутреннего пакета, а у multicast-пакетов OSPF он равен 1 — внешний пакет умер бы на первом же хопе (ISP). Явный `ttl 64` это исключает. Параметр задан двумя способами для совместимости с разными версиями etcnet |
 | `HOST=enp7s1` | туннель зависит от WAN-интерфейса: etcnet поднимет его после `enp7s1` |
 
-Адрес `10.10.10.1/30` — внутренний адрес туннеля, по нему OSPF-соседи видят
+Адрес `10.10.10.1/24` — внутренний адрес туннеля, по нему OSPF-соседи видят
 друг друга.
 
 `modprobe gre` — загрузить модуль ядра GRE прямо сейчас, чтобы рестарт сети
@@ -206,7 +206,7 @@ router ospf
 network 192.168.100.0/27 area 0
 network 192.168.200.0/28 area 0
 network 192.168.99.0/29 area 0
-network 10.10.10.0/30 area 0
+network 10.10.10.0/24 area 0
 exit
 int tun0
 ip ospf authentication message-digest

@@ -13,7 +13,7 @@ HQ-RTR, снаружи пробрасываются SSH и порт веб-пр�
 |---|---|---|
 | `enp7s1` | WAN, к ISP | `172.16.2.2/28` (задаётся руками до скрипта) |
 | `enp7s2` | линк до BR-FW | `192.168.1.1/30` |
-| `tun0` | GRE-туннель в HQ-RTR | `10.10.10.2/30` |
+| `tun0` | GRE-туннель в HQ-RTR | `10.10.10.2/24` |
 
 Всё, что устроено так же, как на HQ-RTR, здесь описано кратко со ссылками —
 подробные объяснения в [03-hq-rtr.md](03-hq-rtr.md).
@@ -52,11 +52,11 @@ BR-RTR, `.2` — BR-FW). Шлюз филиала `192.168.0.1` остался п
 TUNLOCAL=172.16.2.2
 TUNREMOTE=172.16.1.2
 ...
-echo "10.10.10.2/30" > /etc/net/ifaces/tun0/ipv4address
+echo "10.10.10.2/24" > /etc/net/ifaces/tun0/ipv4address
 ```
 
 Зеркало настроек HQ-RTR: `LOCAL` и `REMOTE` меняются местами, внутренний
-адрес — второй в `/30`. Все остальные параметры (`TYPE`, `TUNTYPE`, `TTL`,
+адрес — второй в `10.10.10.0/24`. Все остальные параметры (`TYPE`, `TUNTYPE`, `TTL`,
 `HOST`) **обязаны совпадать** по смыслу с HQ-RTR, иначе туннель не
 поднимется. Подробнее — [03-hq-rtr.md §1.6](03-hq-rtr.md#16-gre-туннель-tun0).
 
@@ -65,7 +65,7 @@ echo "10.10.10.2/30" > /etc/net/ifaces/tun0/ipv4address
 ```
 router ospf
 network 192.168.1.0/30 area 0
-network 10.10.10.0/30 area 0
+network 10.10.10.0/24 area 0
 int tun0
 ip ospf authentication message-digest
 ip ospf message-digest-key 1 md5 P@ssw0rd

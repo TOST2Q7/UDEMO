@@ -14,7 +14,7 @@ WAN="enp7s1"   # toward BR-RTR: the internet and the tunnel to HQ (192.168.1.2/3
 LAN="enp7s2"   # the branch LAN with BR-SRV (192.168.0.1/28)
 # Internal networks that may reach the branch LAN freely: HQ through the
 # tunnel, the tunnel itself and the link to BR-RTR. CHANGE TO YOUR OWN ADDRESSES
-INT_NETS="192.168.100.0/27,192.168.200.0/28,192.168.99.0/29,10.10.10.0/30,192.168.1.0/30"
+INT_NETS="192.168.100.0/27,192.168.200.0/28,192.168.99.0/29,10.10.10.0/24,192.168.1.0/30"
 # BR-SRV and the ports BR-RTR forwards to it from the internet (SSH, testapp)
 BR_SRV="192.168.0.2"
 FWD_PORTS="2027,8080"

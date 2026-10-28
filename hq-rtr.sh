@@ -95,7 +95,7 @@ HOST=enp7s1
 EOF
 
 # ipv4address file
-echo "10.10.10.1/30" > /etc/net/ifaces/tun0/ipv4address
+echo "10.10.10.1/24" > /etc/net/ifaces/tun0/ipv4address
 
 # Load GRE module and restart networking
 modprobe gre
@@ -120,7 +120,7 @@ router ospf
 network 192.168.100.0/27 area 0
 network 192.168.200.0/28 area 0
 network 192.168.99.0/29 area 0
-network 10.10.10.0/30 area 0
+network 10.10.10.0/24 area 0
 exit
 int tun0
 ip ospf authentication message-digest
@@ -236,7 +236,7 @@ check "dnsmasq is running"                          'systemctl is-active --quiet
 check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
 check "dnsmasq listens on VLAN200"                  'grep -q "^interface=enp7s2.200$" /etc/dnsmasq.conf'
 check "Interface tun0 (GRE) is up"                  'ip addr show tun0'
-check "Address 10.10.10.1/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.1/30"'
+check "Address 10.10.10.1/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.1/24"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
 check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'

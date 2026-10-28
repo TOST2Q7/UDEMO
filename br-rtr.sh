@@ -62,7 +62,7 @@ vtysh << 'EOF'
 conf
 router ospf
 network 192.168.1.0/30 area 0
-network 10.10.10.0/30 area 0
+network 10.10.10.0/24 area 0
 exit
 int tun0
 ip ospf authentication message-digest
@@ -176,7 +176,7 @@ check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forwar
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
 check "Address 192.168.1.1/30 on enp7s2 (to BR-FW)" 'ip -4 addr show enp7s2 | grep -q "192.168.1.1/30"'
 check "Interface tun0 (GRE) is up"                   'ip addr show tun0'
-check "Address 10.10.10.2/30 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/30"'
+check "Address 10.10.10.2/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/24"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
 check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'

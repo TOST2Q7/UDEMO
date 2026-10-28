@@ -34,7 +34,7 @@ cat > /etc/chrony.conf <<EOF
 local stratum 5
 allow 172.16.0.0/16
 allow 192.168.0.0/16
-allow 10.10.10.0/30
+allow 10.10.10.0/24
 EOF
 systemctl enable --now chronyd
 systemctl restart chronyd
