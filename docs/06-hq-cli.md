@@ -60,13 +60,22 @@ chrony-клиент с сервером `172.16.1.1` (ISP) — см.
 ## 4. Подключение NFS
 
 ```bash
-mkdir /mnt/nfs
+apt-get install -y nfs-clients
+mkdir -p /mnt/nfs
+sed -i '\#[[:space:]]/mnt/nfs[[:space:]]#d' /etc/fstab
 cat >> /etc/fstab <<EOF
-192.168.100.2:/raid5/nfs /mnt/nfs nfs rw 0 0
+192.168.100.2:/raid5/nfs /mnt/nfs nfs rw,_netdev 0 0
 EOF
 mount -a
 ls /mnt/nfs
 ```
+
+* `nfs-clients` — пакет ALT с `mount.nfs`; без него `mount -t nfs` не
+  работает (на Workstation он бывает не установлен).
+* `_netdev` — systemd монтирует ресурс только после поднятия сети, иначе
+  при загрузке монтирование могло бы сорваться.
+* `sed … /mnt/nfs …d` — старая строка для `/mnt/nfs` удаляется, так что
+  повторный запуск не дублирует запись в fstab.
 
 * Источник — `192.168.100.2:/raid5/nfs`, экспорт с HQ-SRV
   ([05-hq-srv.md §5](05-hq-srv.md#5-nfs)). Указан **IP-адрес, а не имя**:

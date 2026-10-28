@@ -139,15 +139,18 @@ apt-get install -y nfs-server
 systemctl enable --now nfs
 
 # Configure NFS
-mkdir /raid5/nfs
+mkdir -p /raid5/nfs
 chown -R 99:99 /raid5/nfs
 chmod 777 /raid5/nfs
 
 # Add NFS export CHANGE TO YOUR OWN NETWORKS
+# (an old line for this folder is replaced, so a rerun does not duplicate it)
+sed -i '\#^/raid5/nfs[[:space:]]#d' /etc/exports
 echo "/raid5/nfs 192.168.200.0/29(rw,sync,no_subtree_check)" >> /etc/exports
 
-# Restart NFS and create a test file
+# Restart NFS, re-read the exports and create a test file
 systemctl restart nfs
+exportfs -ra
 touch /raid5/nfs/test
 
 echo "Done! RAID and NFS configured."
@@ -239,6 +242,8 @@ check "/raid5 added to fstab"                       'grep -q "/dev/md0p1 /raid5"
 check "NFS server active"                           'systemctl is-active --quiet nfs'
 check "/raid5/nfs directory exists"                 '[ -d /raid5/nfs ]'
 check "NFS export configured"                       'grep -q "^/raid5/nfs 192.168.200.0/29" /etc/exports'
+check "NFS export active (rw for 192.168.200.0/29)" 'exportfs -v | grep -A1 "^/raid5/nfs" | grep -q "192.168.200.0/29(.*rw"'
+check "NFS enabled at boot"                         'systemctl is-enabled --quiet nfs'
 check "NFS test file created"                       '[ -f /raid5/nfs/test ]'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'

@@ -39,12 +39,15 @@ chronyc waitsync 15 0 0 2 >/dev/null
 
 hostnamectl set-hostname hq-cli.tkhis.pro
 
-# Mount NFS share
-mkdir /mnt/nfs
+# Mount NFS share (mount.nfs comes with nfs-clients)
+apt-get install -y nfs-clients
+mkdir -p /mnt/nfs
 
-# fstab entry
+# fstab entry: _netdev waits for the network at boot; an old line for
+# /mnt/nfs is replaced, so a rerun does not duplicate it
+sed -i '\#[[:space:]]/mnt/nfs[[:space:]]#d' /etc/fstab
 cat >> /etc/fstab <<EOF
-192.168.100.2:/raid5/nfs /mnt/nfs nfs rw 0 0
+192.168.100.2:/raid5/nfs /mnt/nfs nfs rw,_netdev 0 0
 EOF
 mount -a
 ls /mnt/nfs
@@ -118,7 +121,9 @@ check "Default route via HQ-RTR (192.168.200.1)"    'ip route get 77.88.8.8 | gr
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 # check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
+check "nfs-clients installed"                       'command -v mount.nfs'
 check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
+check "NFS share is writable"                       'touch /mnt/nfs/.hq-cli-write && rm -f /mnt/nfs/.hq-cli-write'
 check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid5/nfs /mnt/nfs nfs" /etc/fstab'
 check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
 check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'

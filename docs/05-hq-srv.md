@@ -218,11 +218,13 @@ mount -a
 ```bash
 apt-get install -y nfs-server
 systemctl enable --now nfs
-mkdir /raid5/nfs
+mkdir -p /raid5/nfs
 chown -R 99:99 /raid5/nfs
 chmod 777 /raid5/nfs
+sed -i '\#^/raid5/nfs[[:space:]]#d' /etc/exports
 echo "/raid5/nfs 192.168.200.0/29(rw,sync,no_subtree_check)" >> /etc/exports
 systemctl restart nfs
+exportfs -ra
 touch /raid5/nfs/test
 ```
 
@@ -238,7 +240,8 @@ touch /raid5/nfs/test
 | `rw` | чтение и запись |
 | `sync` | сервер подтверждает запись только после сброса на диск — медленнее, но при сбое не теряются «подтверждённые» данные |
 | `no_subtree_check` | отключает проверку, что файл внутри экспортируемого подкаталога; рекомендуемый по умолчанию вариант, избегает проблем при переименовании открытых файлов |
-| `restart nfs` | перечитывает `/etc/exports` |
+| `sed -i '\\#^/raid5/nfs…#d'` | убирает старую строку этой папки: при повторном запуске экспорт не дублируется |
+| `restart nfs` + `exportfs -ra` | перезапуск сервера и явное перечитывание `/etc/exports`; `exportfs -v` покажет, что экспорт действительно применён |
 | `touch test` | тестовый файл — на клиенте `ls /mnt/nfs` должен его показать, это наглядное доказательство, что монтирование работает |
 
 ## 6. Синхронизация времени
