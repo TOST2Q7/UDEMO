@@ -205,7 +205,7 @@ if [ -n "$FOUND_IP" ]; then
     # inventory.yml ships a fixed HQ-CLI address, but HQ-CLI gets a random one from DHCP
     sed -i "/^ *hq-cli:/,/ansible_host:/ s/ansible_host: .*/ansible_host: $FOUND_IP/" /etc/ansible/inventory.yml
 else
-    echo "No host found on ${SUBNET}.2-10 port ${PORT} - hq-cli keeps its inventory address" >&2
+    echo "No host found on ${SUBNET}.2-6 port ${PORT} - hq-cli keeps its inventory address" >&2
 fi
 
 ansible -m ping all
