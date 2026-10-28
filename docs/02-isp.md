@@ -147,7 +147,9 @@ echo '172.16.2.1/28' > /etc/net/ifaces/enp7s3/ipv4address
 ## 5. Маршрутизация (IP forwarding)
 
 ```bash
-sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
+sed -i 's/^#* *net\.ipv4\.ip_forward *=.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf
+grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf
+sysctl -w net.ipv4.ip_forward=1
 ```
 
 По умолчанию Linux **не пересылает** пакеты между интерфейсами — он хост, а
@@ -155,9 +157,11 @@ sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.con
 HQ-RTR к BR-RTR) просто отбрасывались бы.
 
 Правится файл `/etc/net/sysctl.conf` — его применяет etcnet при рестарте
-сети, так что настройка постоянная. `sed` заменяет готовую строку из
-стандартного файла ALT, поэтому шаблон точно совпадает с её форматом
-(с пробелами вокруг `=`).
+сети, так что настройка постоянная. `sed` ловит строку в любом написании
+(закомментированную, без пробелов вокруг `=`, со значением `0`), а если её
+нет вовсе — `grep || echo` дописывает её. `sysctl -w` включает пересылку
+сразу, не дожидаясь рестарта сети. Через ISP идёт и GRE-туннель между
+офисами: без forwarding он не поднимется.
 
 ---
 
@@ -252,6 +256,7 @@ systemctl restart sshd.service
 | `local stratum 5` в конфиге, `Stratum : 5` в `chronyc tracking` | конфиг **и** реальное состояние | сервер действительно раздаёт время с нужным стратумом |
 | Interface up / Address | `ip addr show`, `grep` адреса | адрес реально на интерфейсе, а не только в файле |
 | IP forwarding | строка в `/etc/net/sysctl.conf` | постоянная настройка |
+| IP forwarding active now | `/proc/sys/net/ipv4/ip_forward` = `1` | пересылка включена в ядре прямо сейчас |
 | NAT MASQUERADE | `iptables -t nat -C …` | `-C` (check) — ищет **точное** правило в ядре, без вывода таблиц |
 | iptables at boot | `systemctl is-enabled` | правило переживёт перезагрузку |
 | SSH root login | `^PermitRootLogin yes` | `^` — строка не закомментирована |
@@ -270,17 +275,18 @@ systemctl restart sshd.service
 Баннер предлагает руками прописать маршрутизаторам WAN-адреса:
 
 ```
-HQ router:  172.16.1.2/28, default via 172.16.1.1, nameserver 77.88.8.8
-BR router:  172.16.2.2/28, default via 172.16.2.1, nameserver 77.88.8.8
+HQ router:  BOOTPROTO=static, 172.16.1.2/28, default via 172.16.1.1, nameserver 77.88.8.8
+BR router:  BOOTPROTO=static, 172.16.2.2/28, default via 172.16.2.1, nameserver 77.88.8.8
 ```
 
 Это минимум, нужный маршрутизатору, чтобы **скачать свой скрипт**: адрес в
 сети ISP, маршрут по умолчанию через ISP и публичный DNS (внутреннего ещё
-нет). Всё остальное сделают `hq-rtr.sh` / `br-rtr.sh`. После BR-RTR
-баннер называет и `br-fw.sh` — межсетевой экран филиала
-([12-br-fw.md](12-br-fw.md)).
+нет). Всё остальное сделают `hq-rtr.sh` / `br-rtr.sh`.
+`BOOTPROTO=static` обязателен: ISP не раздаёт адреса по DHCP, а с
+`BOOTPROTO=dhcp` etcnet игнорирует `ipv4address` — у WAN не будет адреса, и
+GRE-туннелю (`TUNLOCAL=172.16.x.2`) не от чего строиться.
 
-Последняя жёлтая строка — напоминание о порядке: `br-rtr.sh` и `br-fw.sh`
-в конце переключают DNS на HQ-SRV (`hq-rtr.sh` оставляет это
+Последняя жёлтая строка — напоминание о порядке: `br-rtr.sh`
+в конце переключает DNS на HQ-SRV (`hq-rtr.sh` оставляет это
 `hq-rtr-2.sh`), поэтому до окончания `hq-srv.sh` имена на них не
 разрешаются; `./retry` возвращает `77.88.8.8` перед скачиванием.

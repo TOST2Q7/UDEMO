@@ -3,16 +3,15 @@
 **Роль узла.** Пограничный маршрутизатор филиала. Зеркальная копия HQ-RTR,
 но проще: в филиале один сервер, поэтому **нет VLAN и нет DHCP**. Как и на
 HQ-RTR, снаружи пробрасываются SSH и порт веб-приложения на сервер филиала.
-Сам сервер стоит **не прямо за BR-RTR, а за межсетевым экраном BR-FW**
-([12-br-fw.md](12-br-fw.md)): `enp7s2` BR-RTR смотрит в отдельную сеть
-`192.168.1.0/30` до BR-FW.
+BR-SRV подключён к BR-RTR **напрямую**: `enp7s2` — LAN филиала, BR-RTR —
+её шлюз.
 
 **Интерфейсы.**
 
 | Интерфейс | Назначение | Адрес |
 |---|---|---|
 | `enp7s1` | WAN, к ISP | `172.16.2.2/28` (задаётся руками до скрипта) |
-| `enp7s2` | линк до BR-FW | `192.168.1.1/30` |
+| `enp7s2` | LAN филиала (BR-SRV) | `192.168.0.1/28` |
 | `tun0` | GRE-туннель в HQ-RTR | `10.10.10.2/24` |
 
 Всё, что устроено так же, как на HQ-RTR, здесь описано кратко со ссылками —
@@ -25,26 +24,37 @@ HQ-RTR, снаружи пробрасываются SSH и порт веб-пр�
 ```bash
 hostnamectl set-hostname br-rtr.tkhis.pro
 apt-get install -y shadow-groups
-sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
+sed -i 's/^#* *net\.ipv4\.ip_forward *=.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf
+grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf
+sysctl -w net.ipv4.ip_forward=1
 ```
 
-Смысл тот же, что на HQ-RTR. Обратите внимание: здесь у `apt-get install`
-нет `-y` — если пакет ещё не установлен, apt спросит подтверждение и
-будет ждать ввода.
+Смысл тот же, что на HQ-RTR, и forwarding включается так же: в любом
+написании строки и сразу, через `sysctl -w` (см.
+[02-isp.md §5](02-isp.md#5-маршрутизация-ip-forwarding)).
 
-## 2. Интерфейс `enp7s2` — линк до BR-FW
+## 2. LAN-интерфейс `enp7s2`
 
 ```bash
 mkdir -p /etc/net/ifaces/enp7s2
-cp -r /etc/net/ifaces/enp7s1/options /etc/net/ifaces/enp7s2/options
-echo "192.168.1.1/30" > /etc/net/ifaces/enp7s2/ipv4address
+cat > /etc/net/ifaces/enp7s2/options <<EOF
+TYPE=eth
+BOOTPROTO=static
+CONFIG_IPV4=yes
+DISABLED=no
+NM_CONTROLLED=no
+SYSTEMD_CONTROLLED=no
+EOF
+echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
 ```
 
 В отличие от HQ-RTR, здесь `enp7s2` — **не trunk**, а обычный порт с
-адресом. Сеть филиала `192.168.0.0/28` за ним не начинается: между ними
-стоит BR-FW. Линк BR-RTR ↔ BR-FW — точка-точка, поэтому `/30` (`.1` —
-BR-RTR, `.2` — BR-FW). Шлюз филиала `192.168.0.1` остался прежним, но
-теперь он на BR-FW, и BR-SRV ничего перенастраивать не пришлось.
+адресом: в филиале один сегмент, и VLAN бы только усложнили конфигурацию
+без пользы. `/28` — до 14 узлов, `.1` — шлюз (этот BR-RTR), `.2` — BR-SRV.
+
+`options` пишется целиком, а не копируется с `enp7s1`: если на WAN ещё
+остался `BOOTPROTO=dhcp`, копия унаследовала бы его, и etcnet не назначил
+бы `enp7s2` адрес из `ipv4address` — BR-SRV остался бы без шлюза.
 
 ## 3. GRE-туннель
 
@@ -64,7 +74,8 @@ echo "10.10.10.2/24" > /etc/net/ifaces/tun0/ipv4address
 
 ```
 router ospf
-network 192.168.1.0/30 area 0
+no network 192.168.1.0/30 area 0
+network 192.168.0.0/28 area 0
 network 10.10.10.0/24 area 0
 int tun0
 ip ospf authentication message-digest
@@ -72,13 +83,14 @@ ip ospf message-digest-key 1 md5 P@ssw0rd
 ip ospf network broadcast
 ```
 
-OSPF включён на линке до BR-FW и на туннеле. Сеть филиала
-`192.168.0.0/28` объявляет уже BR-FW, BR-RTR узнаёт её от него и
-передаёт в HQ. **Ключ и номер ключа совпадают** с HQ-RTR — это
+OSPF включён на LAN филиала и на туннеле: BR-RTR сам объявляет
+`192.168.0.0/28` в HQ. `no network 192.168.1.0/30` убирает линк до BR-FW,
+если маршрутизатор настраивали прежней версией скрипта (на чистом FRR
+vtysh лишь сообщит, что такой сети нет). **Ключ и номер ключа совпадают** с HQ-RTR — это
 обязательное условие установления соседства с MD5-аутентификацией.
 **Тип сети на `tun0` — broadcast**, как на HQ-RTR: типы на двух концах
 должны совпадать. После схождения OSPF BR-RTR знает три VLAN головного
-офиса, а HQ-RTR — `192.168.1.0/30` и `192.168.0.0/28`.
+офиса, а HQ-RTR — `192.168.0.0/28`.
 
 ## 5. Пользователь `net_admin`, SSH
 
@@ -137,6 +149,14 @@ chrony-клиент с сервером `172.16.2.1` — ближайший к �
 
 Сверх стандартных:
 
+* `IP forwarding active now` — пересылка включена в ядре, а не только в
+  файле.
+* `WAN 172.16.2.2/28 on enp7s1`, `ISP reachable (172.16.2.1)`,
+  `HQ-RTR WAN reachable (172.16.1.2)` — подложка туннеля. Если здесь FAIL,
+  GRE не поднимется, и искать надо в WAN/ISP, а не в настройках `tun0`.
+* `Address 192.168.0.1/28 on enp7s2 (BR LAN)` — шлюз филиала на месте.
+* `BR-SRV reachable (192.168.0.2)` — прямая связь с сервером филиала. При
+  первом прогоне FAIL нормален: BR-SRV настраивается следующим.
 * `Interface tun0 (GRE) is up` — у интерфейса есть флаг `UP`, а не просто
   он существует.
 * `tun0 is GRE 172.16.2.2 -> 172.16.1.2` — `ip -d link` показывает, что это именно GRE
@@ -158,6 +178,6 @@ chrony-клиент с сервером `172.16.2.1` — ближайший к �
 
 ## 10. NEXT STEP
 
-Следующий — **BR-FW** (`br-fw.sh`). Команды для него: `BOOTPROTO=static`,
-статический `192.168.1.2/30`, шлюз `192.168.1.1`, временный DNS
-`77.88.8.8` на `enp7s1`. Подсказку для BR-SRV печатает уже `br-fw.sh`.
+Следующий — **BR-SRV** (`br-srv.sh`). Команды для него: `BOOTPROTO=static`,
+статический `192.168.0.2/28`, шлюз `192.168.0.1`, временный DNS
+`77.88.8.8` на `enp7s1`.

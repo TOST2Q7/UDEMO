@@ -95,10 +95,8 @@ host-record=hq-rtr.tkhis.pro,192.168.100.1
 cname=moodle.tkhis.pro,hq-rtr.tkhis.pro
 cname=wiki.tkhis.pro,hq-rtr.tkhis.pro
 
-address=/br-rtr.tkhis.pro/192.168.1.1
-ptr-record=1.1.168.192.in-addr.arpa,br-rtr.tkhis.pro
-address=/br-fw.tkhis.pro/192.168.0.1
-ptr-record=1.0.168.192.in-addr.arpa,br-fw.tkhis.pro
+address=/br-rtr.tkhis.pro/192.168.0.1
+ptr-record=1.0.168.192.in-addr.arpa,br-rtr.tkhis.pro
 address=/hq-srv.tkhis.pro/192.168.100.2
 ptr-record=2.100.168.192.in-addr.arpa,hq-srv.tkhis.pro
 address=/br-srv.tkhis.pro/192.168.0.2
@@ -111,10 +109,7 @@ address=/docker.tkhis.pro/172.16.2.1
 ptr-record=1.2.16.172.in-addr.arpa,docker.tkhis.pro
 ```
 
-* **`br-rtr` → `192.168.1.1`, `br-fw` → `192.168.0.1`.** Адрес
-  `192.168.0.1` (шлюз филиала) теперь принадлежит межсетевому экрану BR-FW,
-  а BR-RTR доступен изнутри по своему адресу на линке до BR-FW
-  ([12-br-fw.md](12-br-fw.md)).
+* **`br-rtr` → `192.168.0.1`** — его адрес в LAN филиала (шлюз BR-SRV).
 * **`web` и `docker`** указывают на ISP, где работает обратный прокси
   nginx (`proxy.sh`): `web` — на его адрес в сторону HQ, `docker` — в
   сторону филиала. Nginx слушает на всех адресах, так что годится любой.

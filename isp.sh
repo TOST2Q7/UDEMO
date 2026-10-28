@@ -75,8 +75,11 @@ EOF
 echo '172.16.1.1/28' > /etc/net/ifaces/enp7s2/ipv4address
 echo '172.16.2.1/28' > /etc/net/ifaces/enp7s3/ipv4address
 
-# Enable routing
-sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
+# Enable routing (any spelling of the line, add it if it is missing)
+sed -i 's/^#* *net\.ipv4\.ip_forward *=.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf
+grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf
+# and switch it on right now, not only on the next network restart
+sysctl -w net.ipv4.ip_forward=1
 
 # Configure NAT
 apt-get install iptables -y
@@ -146,7 +149,8 @@ check "Interface enp7s2 is up"                       'ip addr show enp7s2'
 check "Address 172.16.1.1/28 on enp7s2"             'ip -4 addr show enp7s2 | grep -q "172.16.1.1/28"'
 check "Interface enp7s3 is up"                       'ip addr show enp7s3'
 check "Address 172.16.2.1/28 on enp7s3"             'ip -4 addr show enp7s3 | grep -q "172.16.2.1/28"'
-check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding enabled"                       'grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding active now"                    '[ "$(cat /proc/sys/net/ipv4/ip_forward)" = "1" ]'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "iptables enabled at boot"                    'systemctl is-enabled --quiet iptables'
 check "SSH root login allowed"                      'grep -q "^PermitRootLogin yes" /etc/openssh/sshd_config'
@@ -180,14 +184,15 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e "${CYAN} NEXT STEP${NC}"
     echo -e "${CYAN}============================================================${NC}"
-    echo -e " Run next : ${YELLOW}hq-rtr.sh${NC}, ${YELLOW}br-rtr.sh${NC}, then ${YELLOW}br-fw.sh${NC}"
+    echo -e " Run next : ${YELLOW}hq-rtr.sh${NC} and ${YELLOW}br-rtr.sh${NC}"
     echo -e " First, on each router (enp7s1 = WAN to this ISP):"
     echo -e "   cd /etc/net/ifaces/enp7s1"
+    echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' options"
     echo -e "   echo 172.16.1.2/28 > ipv4address            # BR-RTR: 172.16.2.2/28"
     echo -e "   echo 'default via 172.16.1.1' > ipv4route   # BR-RTR: 172.16.2.1"
     echo -e "   echo 'nameserver 77.88.8.8' > resolv.conf"
     echo -e "   systemctl restart network"
-    echo -e " ${YELLOW}!${NC} br-rtr.sh/br-fw.sh point DNS at HQ-SRV at the end: no names"
+    echo -e " ${YELLOW}!${NC} br-rtr.sh points DNS at HQ-SRV at the end: no names"
     echo -e "   there until hq-srv.sh is done (./retry puts 77.88.8.8 back)"
     echo -e "${CYAN}============================================================${NC}"
 }
@@ -196,8 +201,7 @@ next_step_full() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e "${CYAN} NEXT STEP${NC}"
     echo -e "${CYAN}============================================================${NC}"
-    echo -e " Run next : ${YELLOW}hq-rtr.sh${NC} (HQ router) and ${YELLOW}br-rtr.sh${NC} (branch router),"
-    echo -e "            then ${YELLOW}br-fw.sh${NC} (branch firewall behind BR-RTR)"
+    echo -e " Run next : ${YELLOW}hq-rtr.sh${NC} (HQ router) and ${YELLOW}br-rtr.sh${NC} (branch router)"
     echo -e " Segment  : WAN uplinks toward this ISP"
     echo -e " (proxy.sh and gost-isp.sh were pre-fetched into this directory:"
     echo -e "  proxy.sh once web.sh on HQ-SRV and docker.sh on BR-SRV are up,"
@@ -207,18 +211,20 @@ next_step_full() {
     echo -e " Before running them, set static WAN addresses on each router (enp7s1):"
     echo
     echo -e "   HQ router (enp7s1):"
+    echo -e "     sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
     echo -e "     echo 172.16.1.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
     echo -e "     echo 'default via 172.16.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
     echo -e "     echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
     echo
     echo -e "   Branch router (enp7s1):"
+    echo -e "     sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
     echo -e "     echo 172.16.2.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
     echo -e "     echo 'default via 172.16.2.1' > /etc/net/ifaces/enp7s1/ipv4route"
     echo -e "     echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
     echo
     echo -e "   On both: systemctl restart network"
     echo
-    echo -e " ${YELLOW}! br-rtr.sh and br-fw.sh end by pointing DNS at HQ-SRV${NC}"
+    echo -e " ${YELLOW}! br-rtr.sh ends by pointing DNS at HQ-SRV${NC}"
     echo -e " ${YELLOW}  (hq-rtr.sh leaves that to hq-rtr-2.sh): names do not resolve${NC}"
     echo -e " ${YELLOW}  there until hq-srv.sh is done; ./retry puts 77.88.8.8 back${NC}"
     echo -e "${CYAN}============================================================${NC}"

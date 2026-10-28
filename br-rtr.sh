@@ -15,14 +15,26 @@ hostnamectl set-hostname br-rtr.tkhis.pro
 # Install gpasswd
 apt-get install -y shadow-groups
 
-# Enable routing
-sed -i "s/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/" "/etc/net/sysctl.conf"
+# Enable routing (any spelling of the line, add it if it is missing)
+sed -i 's/^#* *net\.ipv4\.ip_forward *=.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf
+grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf
+# and switch it on right now, not only on the next network restart
+sysctl -w net.ipv4.ip_forward=1
 
-# Create enp7s2: the /30 link to BR-FW. The branch LAN 192.168.0.0/28
-# sits behind BR-FW now, which owns its gateway 192.168.0.1
+# Create enp7s2: the branch LAN 192.168.0.0/28, BR-SRV is plugged in
+# directly and uses this router (192.168.0.1) as its gateway.
+# Own options instead of a copy of enp7s1: if enp7s1 is still on DHCP the
+# copy would be too, and etcnet would ignore ipv4address
 mkdir -p /etc/net/ifaces/enp7s2
-cp -r /etc/net/ifaces/enp7s1/options /etc/net/ifaces/enp7s2/options
-echo "192.168.1.1/30" > /etc/net/ifaces/enp7s2/ipv4address
+cat > /etc/net/ifaces/enp7s2/options <<EOF
+TYPE=eth
+BOOTPROTO=static
+CONFIG_IPV4=yes
+DISABLED=no
+NM_CONTROLLED=no
+SYSTEMD_CONTROLLED=no
+EOF
+echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
 
 # Create tunnel directory and config files
 mkdir -p /etc/net/ifaces/tun0
@@ -58,10 +70,13 @@ systemctl daemon-reload
 systemctl enable --now frr
 
 # Configure OSPF via vtysh (automatic input) CHANGE TO YOUR OWN ADDRESSES
+# "no network 192.168.1.0/30" removes the old BR-FW link from a router
+# configured by an earlier version; vtysh only complains if it is not there
 vtysh << 'EOF'
 conf
 router ospf
-network 192.168.1.0/30 area 0
+no network 192.168.1.0/30 area 0
+network 192.168.0.0/28 area 0
 network 10.10.10.0/24 area 0
 exit
 int tun0
@@ -172,9 +187,13 @@ echo "=== Checking br-rtr configuration ===" | tee -a "$LOG"
 check "Hostname = br-rtr.tkhis.pro"              '[ "$(hostnamectl --static)" = "br-rtr.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
-check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding enabled"                       'grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
+check "IP forwarding active now"                    '[ "$(cat /proc/sys/net/ipv4/ip_forward)" = "1" ]'
+check "WAN 172.16.2.2/28 on enp7s1"                 'ip -4 addr show enp7s1 | grep -q "172.16.2.2/28"'
+check "ISP reachable (172.16.2.1)"                  'ping -c 2 -W 1 172.16.2.1'
+check "HQ-RTR WAN reachable (172.16.1.2)"           'ping -c 2 -W 1 172.16.1.2'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
-check "Address 192.168.1.1/30 on enp7s2 (to BR-FW)" 'ip -4 addr show enp7s2 | grep -q "192.168.1.1/30"'
+check "Address 192.168.0.1/28 on enp7s2 (BR LAN)"   'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
 check "Interface tun0 (GRE) is up"                  'ip link show tun0 | grep -q ",UP"'
 check "tun0 is GRE 172.16.2.2 -> 172.16.1.2"        'ip -d link show tun0 | grep -q "gre remote 172.16.1.2 local 172.16.2.2"'
 check "Address 10.10.10.2/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/24"'
@@ -184,6 +203,7 @@ check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf inte
 check "OSPF neighbour 10.10.10.1 is Full on tun0"   'vtysh -c "show ip ospf neighbor" | grep "10.10.10.1" | grep -q Full'
 check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
+check "BR-SRV reachable (192.168.0.2)"              'ping -c 2 -W 1 192.168.0.2'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "SSH DNAT (2027) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2027 -j DNAT --to-destination 192.168.0.2:2027'
 check "testapp DNAT (8080) configured"              'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080'
@@ -234,13 +254,13 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e "${CYAN} NEXT STEP${NC}"
     echo -e "${CYAN}============================================================${NC}"
-    echo -e " Run next : ${YELLOW}br-fw.sh${NC} on the branch firewall host"
-    echo -e " Segment  : 192.168.1.0/30 (link BR-RTR - BR-FW)"
+    echo -e " Run next : ${YELLOW}br-srv.sh${NC} on the branch server host"
+    echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN), gateway is this BR-RTR"
     echo
     echo -e " Before running it, set a static address on that host (enp7s1):"
     echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
-    echo -e "   echo 192.168.1.2/30 > /etc/net/ifaces/enp7s1/ipv4address"
-    echo -e "   echo 'default via 192.168.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
+    echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
+    echo -e "   echo 'default via 192.168.0.1' > /etc/net/ifaces/enp7s1/ipv4route"
     echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
     echo -e "   systemctl restart network"
     echo -e "${CYAN}============================================================${NC}"
