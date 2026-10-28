@@ -55,13 +55,13 @@ chrony-клиент с сервером `172.16.1.1` (ISP) — см.
 ```bash
 mkdir /mnt/nfs
 cat >> /etc/fstab <<EOF
-192.168.100.2:/raid/nfs /mnt/nfs nfs rw 0 0
+192.168.100.2:/raid5/nfs /mnt/nfs nfs rw 0 0
 EOF
 mount -a
 ls /mnt/nfs
 ```
 
-* Источник — `192.168.100.2:/raid/nfs`, экспорт с HQ-SRV
+* Источник — `192.168.100.2:/raid5/nfs`, экспорт с HQ-SRV
   ([05-hq-srv.md §5](05-hq-srv.md#5-nfs)). Указан **IP-адрес, а не имя**:
   монтирование из fstab происходит при загрузке, и если DNS в этот момент
   недоступен, по имени диск бы не подключился.

@@ -42,7 +42,7 @@ mkdir /mnt/nfs
 
 # fstab entry
 cat >> /etc/fstab <<EOF
-192.168.100.2:/raid/nfs /mnt/nfs nfs rw 0 0
+192.168.100.2:/raid5/nfs /mnt/nfs nfs rw 0 0
 EOF
 mount -a
 ls /mnt/nfs
@@ -117,7 +117,7 @@ check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "Yandex Browser installed"                    'rpm -q yandex-browser-stable'
 check "/mnt/nfs is mounted"                         'mountpoint -q /mnt/nfs'
-check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid/nfs /mnt/nfs nfs" /etc/fstab'
+check "NFS mount added to fstab"                    'grep -q "192.168.100.2:/raid5/nfs /mnt/nfs nfs" /etc/fstab'
 check "User sshuser created (UID 2027)"             '[ "$(id -u sshuser)" = "2027" ]'
 check "sshuser is in group wheel"                   'id -nG sshuser | grep -qw wheel'
 check "sshuser added to sudoers"                    'grep -q "sshuser ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'

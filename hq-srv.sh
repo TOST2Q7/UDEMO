@@ -115,8 +115,8 @@ echo "- Root login disabled"
 echo "- Banner created"
 
 echo "Configuring RAID"
-# Create RAID 0
-mdadm --create --verbose /dev/md0 -l 0 -n 3 /dev/sd[b-d]
+# Create RAID 5
+mdadm --create --verbose /dev/md0 -l 5 -n 3 /dev/sd[b-d]
 
 # Save configuration
 mdadm --detail --scan > /etc/mdadm.conf
@@ -128,10 +128,10 @@ echo -e "n\n\n\n\n\nw" | fdisk /dev/md0
 mkfs.ext4 /dev/md0p1
 
 # Create directory and mount
-mkdir /raid
+mkdir /raid5
 
 # Add to fstab
-echo "/dev/md0p1 /raid ext4 defaults 0 0" >> /etc/fstab
+echo "/dev/md0p1 /raid5 ext4 defaults 0 0" >> /etc/fstab
 mount -a
 
 # Install NFS
@@ -139,16 +139,16 @@ apt-get install -y nfs-server
 systemctl enable --now nfs
 
 # Configure NFS
-mkdir /raid/nfs
-chown -R 99:99 /raid/nfs
-chmod 777 /raid/nfs
+mkdir /raid5/nfs
+chown -R 99:99 /raid5/nfs
+chmod 777 /raid5/nfs
 
 # Add NFS export CHANGE TO YOUR OWN NETWORKS
-echo "/raid/nfs 192.168.200.0/28(rw,sync,no_subtree_check)" >> /etc/exports
+echo "/raid5/nfs 192.168.200.0/28(rw,sync,no_subtree_check)" >> /etc/exports
 
 # Restart NFS and create a test file
 systemctl restart nfs
-touch /raid/nfs/test
+touch /raid5/nfs/test
 
 echo "Done! RAID and NFS configured."
 
@@ -232,13 +232,14 @@ check "SSH service active"                          'systemctl is-active --quiet
 check "SSH enabled at boot"                         'systemctl is-enabled --quiet sshd'
 check "sshpass installed"                           'command -v sshpass'
 check "RAID array /dev/md0 exists"                  'grep -q "^md0 :" /proc/mdstat'
+check "RAID level is 5"                             'grep -q "^md0 : active raid5" /proc/mdstat'
 check "/etc/mdadm.conf saved"                       '[ -s /etc/mdadm.conf ]'
-check "/raid is mounted"                            'mountpoint -q /raid'
-check "/raid added to fstab"                        'grep -q "/dev/md0p1 /raid" /etc/fstab'
+check "/raid5 is mounted"                           'mountpoint -q /raid5'
+check "/raid5 added to fstab"                       'grep -q "/dev/md0p1 /raid5" /etc/fstab'
 check "NFS server active"                           'systemctl is-active --quiet nfs'
-check "/raid/nfs directory exists"                  '[ -d /raid/nfs ]'
-check "NFS export configured"                       'grep -q "^/raid/nfs 192.168.200.0/28" /etc/exports'
-check "NFS test file created"                       '[ -f /raid/nfs/test ]'
+check "/raid5/nfs directory exists"                 '[ -d /raid5/nfs ]'
+check "NFS export configured"                       'grep -q "^/raid5/nfs 192.168.200.0/28" /etc/exports'
+check "NFS test file created"                       '[ -f /raid5/nfs/test ]'
 check "chronyd active"                              'systemctl is-active --quiet chronyd'
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.1.1)"     'grep -qx "server 172.16.1.1 iburst" /etc/chrony.conf'

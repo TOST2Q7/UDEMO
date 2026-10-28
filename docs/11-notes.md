@@ -112,7 +112,7 @@ BR-SRV на самого себя.
 * В `dnsmasq.conf` `expand-hosts` встречается дважды, а строка
   `address=/hq-cli…/192.168.200.2 ` заканчивается пробелом — dnsmasq
   это допускает.
-* В `hq-srv.sh` `mkdir /raid` и `mkdir /raid/nfs`, а в `hq-cli.sh`
+* В `hq-srv.sh` `mkdir /raid5` и `mkdir /raid5/nfs`, а в `hq-cli.sh`
   `mkdir /mnt/nfs` — без `-p`: при повторном запуске выведут
   «File exists», но не помешают.
 * `SYSTEMD_BOOTPROTO=dhcp4` в `options` на ISP не действует
@@ -125,7 +125,6 @@ BR-SRV на самого себя.
 `NOPASSWD: ALL` для администраторов, `chmod 777` на NFS, вход root по SSH
 на ISP, отключённая проверка ключей хостов в Ansible и в `gost.sh`,
 пароль root MariaDB `toor` в `docker.sh`, порт БД 3306 опубликован на
-хосте, RAID 0 без
-избыточности, GRE без шифрования. Все эти решения объяснены в
+хосте, GRE без шифрования. Все эти решения объяснены в
 соответствующих документах как **требования задания или упрощения
 стенда**.

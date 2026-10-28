@@ -68,7 +68,7 @@
      │ .100.2│    │ DHCP  │        │ .0.2  │
      └───────┘    └───────┘        └───────┘
    DNS (dnsmasq)  Браузер,        SSH, Ansible,
-   RAID0 + NFS    NFS-клиент      Samba AD DC,
+   RAID5 + NFS    NFS-клиент      Samba AD DC,
    сайт (LAMP)                    Docker (testapp)
    ГОСТ-УЦ
 ```
