@@ -42,7 +42,7 @@ EOF
 echo "10.10.10.2/24" > /etc/net/ifaces/tun0/ipv4address
 
 # Load GRE module and restart networking
-modprobe gre
+modprobe ip_gre
 systemctl restart network
 
 echo "Tunnel configured"
@@ -175,11 +175,13 @@ check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
 check "Address 192.168.1.1/30 on enp7s2 (to BR-FW)" 'ip -4 addr show enp7s2 | grep -q "192.168.1.1/30"'
-check "Interface tun0 (GRE) is up"                   'ip addr show tun0'
+check "Interface tun0 (GRE) is up"                  'ip link show tun0 | grep -q ",UP"'
+check "tun0 is GRE 172.16.2.2 -> 172.16.1.2"        'ip -d link show tun0 | grep -q "gre remote 172.16.1.2 local 172.16.2.2"'
 check "Address 10.10.10.2/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/24"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
 check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'
+check "OSPF neighbour 10.10.10.1 is Full on tun0"   'vtysh -c "show ip ospf neighbor" | grep "10.10.10.1" | grep -q Full'
 check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'

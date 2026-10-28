@@ -98,7 +98,7 @@ EOF
 echo "10.10.10.1/24" > /etc/net/ifaces/tun0/ipv4address
 
 # Load GRE module and restart networking
-modprobe gre
+modprobe ip_gre
 systemctl restart network
 
 echo "Tunnel configured"
@@ -195,6 +195,16 @@ nameserver 77.88.8.8
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
+# tun0 is an OSPF broadcast network: the adjacency with BR-RTR waits for
+# the DR election (~40 s). Wait up to ~60 s for Full, but only when the
+# other end of the tunnel answers (BR-RTR may not be configured yet)
+if ping -c 2 -W 1 10.10.10.2 &>/dev/null; then
+    for i in $(seq 60); do
+        vtysh -c "show ip ospf neighbor" | grep "10.10.10.2" | grep -q Full && break
+        sleep 1
+    done
+fi
+
 # ===========================================================
 # Final check of everything this script configured
 # ===========================================================
@@ -235,11 +245,13 @@ check "Address 192.168.99.1/29 on enp7s2.999"       'ip -4 addr show enp7s2.999 
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
 check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
 check "dnsmasq listens on VLAN200"                  'grep -q "^interface=enp7s2.200$" /etc/dnsmasq.conf'
-check "Interface tun0 (GRE) is up"                  'ip addr show tun0'
+check "Interface tun0 (GRE) is up"                  'ip link show tun0 | grep -q ",UP"'
+check "tun0 is GRE 172.16.1.2 -> 172.16.2.2"        'ip -d link show tun0 | grep -q "gre remote 172.16.2.2 local 172.16.1.2"'
 check "Address 10.10.10.1/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.1/24"'
 check "FRR is running"                              'systemctl is-active --quiet frr'
 check "OSPF daemon enabled in FRR"                  'grep -q "ospfd=yes" /etc/frr/daemons'
 check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf interface tun0" | grep -q "Network Type BROADCAST"'
+check "OSPF neighbour 10.10.10.2 is Full on tun0"   'vtysh -c "show ip ospf neighbor" | grep "10.10.10.2" | grep -q Full'
 check "Tunnel to branch responds (10.10.10.2)"      'ping -c 3 -W 1 10.10.10.2'
 check "HQ-SRV reachable (192.168.100.2)"            'ping -c 3 -W 1 192.168.100.2'
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
