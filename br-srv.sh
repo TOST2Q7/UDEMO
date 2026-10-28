@@ -177,10 +177,21 @@ rm -f "$SELF"
 # Ping SSH so ansible can work
 apt-get install sshpass -y
 
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.100.1
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 admin@192.168.0.1
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.100.2
-sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p 2127 userssh@192.168.0.2
+# Each login only runs "hostname" and comes straight back: an interactive
+# session here would leave you in another host's shell (and its ./retry)
+# while the console still looks like BR-SRV
+ssh_try() {
+    if sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            -p 2127 "$1" hostname 2>/dev/null; then
+        echo "  ^ SSH OK: $1"
+    else
+        echo "SSH FAILED: $1" >&2
+    fi
+}
+ssh_try admin@192.168.100.1
+ssh_try admin@192.168.0.1
+ssh_try userssh@192.168.100.2
+ssh_try userssh@192.168.0.2
 
 # --- Connect to the host with a dynamic IP (DHCP pool 192.168.200.2-192.168.200.6) ---
 PORT=2127
@@ -210,6 +221,8 @@ fi
 
 ansible -m ping all
 
-[ -n "$FOUND_IP" ] && sshpass -p 'P@ssw0rd' ssh -o StrictHostKeyChecking=no -p "$PORT" "${USER}@${FOUND_IP}"
+[ -n "$FOUND_IP" ] && ssh_try "${USER}@${FOUND_IP}"
+
+echo -e "${CYAN}You are on BR-SRV ($(hostname)).${NC}"
 
 exec bash
