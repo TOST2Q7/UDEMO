@@ -15,6 +15,15 @@ IFACE="enp7s1"
 ip link show enp7s1.200 &>/dev/null && IFACE="enp7s1.200"
 # ===========================================================
 
+# Alt Workstation's updater (PackageKit) grabs the apt lock right after
+# boot: stop it and wait up to ~2 min for any other apt/Synaptic to finish
+systemctl stop packagekit 2>/dev/null
+for i in $(seq 60); do
+    pgrep -x 'apt-get|synaptic|packagekitd' >/dev/null || break
+    [ "$i" = 1 ] && echo "Waiting for another package manager to finish..."
+    sleep 2
+done
+
 apt-get update
 # Yandex Browser is not installed for now; uncomment to bring it back
 # apt-get install -y yandex-browser-stable
