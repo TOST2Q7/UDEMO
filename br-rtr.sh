@@ -10,7 +10,7 @@ NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
 # ===========================================================
 
-hostnamectl set-hostname br-rtr.au-team.irpo
+hostnamectl set-hostname br-rtr.tkhis.pro
 
 # Install gpasswd
 apt-get install -y shadow-groups
@@ -39,7 +39,7 @@ HOST=enp7s1
 EOF
 
 # ipv4address file
-echo "10.10.10.2/30" > /etc/net/ifaces/tun0/ipv4address
+echo "10.10.10.2/24" > /etc/net/ifaces/tun0/ipv4address
 
 # Load GRE module and restart networking
 modprobe gre
@@ -134,7 +134,7 @@ chronyc waitsync 15 0 0 2 >/dev/null
 # ===========================================================
 cat > /etc/net/ifaces/enp7s1/resolv.conf <<EOF
 nameserver 192.168.100.2
-search au-team.irpo
+search tkhis.pro
 EOF
 cp /etc/net/ifaces/enp7s1/resolv.conf /etc/resolv.conf
 
@@ -169,7 +169,7 @@ check() {
 
 : > "$LOG"
 echo "=== Checking br-rtr configuration ===" | tee -a "$LOG"
-check "Hostname = br-rtr.au-team.irpo"              '[ "$(hostnamectl --static)" = "br-rtr.au-team.irpo" ]'
+check "Hostname = br-rtr.tkhis.pro"              '[ "$(hostnamectl --static)" = "br-rtr.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
 check "IP forwarding enabled"                       'grep -q "net.ipv4.ip_forward = 1" /etc/net/sysctl.conf'
@@ -198,7 +198,7 @@ check "chronyd active"                              'systemctl is-active --quiet
 check "chronyd enabled at boot"                     'systemctl is-enabled --quiet chronyd'
 check "chrony.conf points to ISP (172.16.2.1)"     'grep -qx "server 172.16.2.1 iburst" /etc/chrony.conf'
 check "Time synced from ISP (172.16.2.1)"          'chronyc -n sources | grep -q "^\^\* 172.16.2.1 "'
-check "DNS on enp7s1: 192.168.100.2, search au-team.irpo" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search au-team.irpo" /etc/net/ifaces/enp7s1/resolv.conf'
+check "DNS on enp7s1: 192.168.100.2, search tkhis.pro" 'grep -qx "nameserver 192.168.100.2" /etc/net/ifaces/enp7s1/resolv.conf && grep -qx "search tkhis.pro" /etc/net/ifaces/enp7s1/resolv.conf'
 echo "=== Check complete, log saved to $LOG ===" | tee -a "$LOG"
 
 # ===========================================================
