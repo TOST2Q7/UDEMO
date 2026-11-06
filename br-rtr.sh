@@ -8,7 +8,42 @@ LOG="$DIR/${NAME%.sh}-check.log"
 # NEXT STEP banner is also saved here: cat it to see the steps again
 NEXT="$DIR/${NAME%.sh}-next-step.txt"
 RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/checks/$NAME"
+
+# Is there a firewall (BR-FW) between this router and BR-SRV?
+#   yes: enp7s2 is the 192.168.1.0/30 link to BR-FW, which owns the branch
+#        LAN gateway 192.168.0.1 (br-fw.sh)
+#   no:  BR-SRV is plugged into enp7s2 directly, gateway 192.168.0.1 is here
+# Empty = ask right away (Enter = yes); "BR_FW=no ./br-rtr.sh" skips the question
+BR_FW="${BR_FW:-}"
 # ===========================================================
+
+# Ask first: the answer decides the LAN side of this router
+choose_br_fw() {
+    local ans
+    case "$BR_FW" in yes|no) return ;; esac
+    BR_FW="yes"
+    { : </dev/tty; } 2>/dev/null || return
+    echo
+    echo " Is there a firewall BR-FW between BR-RTR and BR-SRV?"
+    echo "   1) Yes: BR-RTR - 192.168.1.0/30 - BR-FW - 192.168.0.0/28 - BR-SRV (default)"
+    echo "   2) No:  BR-SRV is plugged into BR-RTR directly, 192.168.0.0/28"
+    while true; do
+        read -r -p " Choice [1]: " ans </dev/tty
+        case "$ans" in
+            ""|1) BR_FW="yes"; return ;;
+            2)    BR_FW="no";  return ;;
+        esac
+    done
+}
+choose_br_fw
+if [ "$BR_FW" = "yes" ]; then
+    LAN_ADDR="192.168.1.1/30"; LAN_NET="192.168.1.0/30"; OTHER_NET="192.168.0.0/28"
+    LAN_PEER="192.168.1.2";    LAN_ROLE="link to BR-FW"
+else
+    LAN_ADDR="192.168.0.1/28"; LAN_NET="192.168.0.0/28"; OTHER_NET="192.168.1.0/30"
+    LAN_PEER="192.168.0.2";    LAN_ROLE="BR LAN, BR-SRV"
+fi
+echo "BR-FW: $BR_FW - enp7s2 = $LAN_ADDR ($LAN_ROLE)"
 
 hostnamectl set-hostname br-rtr.tkhis.pro
 
@@ -21,8 +56,8 @@ grep -q "^net.ipv4.ip_forward = 1" /etc/net/sysctl.conf || echo "net.ipv4.ip_for
 # and switch it on right now, not only on the next network restart
 sysctl -w net.ipv4.ip_forward=1
 
-# Create enp7s2: the branch LAN 192.168.0.0/28, BR-SRV is plugged in
-# directly and uses this router (192.168.0.1) as its gateway.
+# Create enp7s2: with BR-FW the /30 link to it, without BR-FW the branch
+# LAN 192.168.0.0/28 itself with BR-SRV using this router (192.168.0.1).
 # Own options instead of a copy of enp7s1: if enp7s1 is still on DHCP the
 # copy would be too, and etcnet would ignore ipv4address
 mkdir -p /etc/net/ifaces/enp7s2
@@ -34,7 +69,7 @@ DISABLED=no
 NM_CONTROLLED=no
 SYSTEMD_CONTROLLED=no
 EOF
-echo "192.168.0.1/28" > /etc/net/ifaces/enp7s2/ipv4address
+echo "$LAN_ADDR" > /etc/net/ifaces/enp7s2/ipv4address
 
 # Create tunnel directory and config files
 mkdir -p /etc/net/ifaces/tun0
@@ -70,13 +105,13 @@ systemctl daemon-reload
 systemctl enable --now frr
 
 # Configure OSPF via vtysh (automatic input) CHANGE TO YOUR OWN ADDRESSES
-# "no network 192.168.1.0/30" removes the old BR-FW link from a router
-# configured by an earlier version; vtysh only complains if it is not there
-vtysh << 'EOF'
+# "no network $OTHER_NET" drops the other BR-FW scenario's network from a
+# router set up by an earlier run; vtysh only complains if it is not there
+vtysh << EOF
 conf
 router ospf
-no network 192.168.1.0/30 area 0
-network 192.168.0.0/28 area 0
+no network $OTHER_NET area 0
+network $LAN_NET area 0
 network 10.10.10.0/24 area 0
 exit
 int tun0
@@ -183,7 +218,7 @@ check() {
 }
 
 : > "$LOG"
-echo "=== Checking br-rtr configuration ===" | tee -a "$LOG"
+echo "=== Checking br-rtr configuration (BR-FW: $BR_FW) ===" | tee -a "$LOG"
 check "Hostname = br-rtr.tkhis.pro"              '[ "$(hostnamectl --static)" = "br-rtr.tkhis.pro" ]'
 check "tzdata installed"                            'rpm -q tzdata'
 check "Local time is UTC+7 (Asia/Krasnoyarsk)"     '[ "$(date +%z)" = "+0700" ]'
@@ -193,7 +228,7 @@ check "WAN 172.16.2.2/28 on enp7s1"                 'ip -4 addr show enp7s1 | gr
 check "ISP reachable (172.16.2.1)"                  'ping -c 2 -W 1 172.16.2.1'
 check "HQ-RTR WAN reachable (172.16.1.2)"           'ping -c 2 -W 1 172.16.1.2'
 check "Interface enp7s2 is up"                       'ip addr show enp7s2'
-check "Address 192.168.0.1/28 on enp7s2 (BR LAN)"   'ip -4 addr show enp7s2 | grep -q "192.168.0.1/28"'
+check "Address $LAN_ADDR on enp7s2 ($LAN_ROLE)"    "ip -4 addr show enp7s2 | grep -q '$LAN_ADDR'"
 check "Interface tun0 (GRE) is up"                  'ip link show tun0 | grep -q ",UP"'
 check "tun0 is GRE 172.16.2.2 -> 172.16.1.2"        'ip -d link show tun0 | grep -q "gre remote 172.16.1.2 local 172.16.2.2"'
 check "Address 10.10.10.2/24 on tun0"               'ip -4 addr show tun0 | grep -q "10.10.10.2/24"'
@@ -203,7 +238,7 @@ check "OSPF network type on tun0 is broadcast"      'vtysh -c "show ip ospf inte
 check "OSPF neighbour 10.10.10.1 is Full on tun0"   'vtysh -c "show ip ospf neighbor" | grep "10.10.10.1" | grep -q Full'
 check "Tunnel to HQ-RTR responds (10.10.10.1)"      'ping -c 3 -W 1 10.10.10.1'
 check "OSPF route to HQ responds (192.168.100.1)"   'ping -c 3 -W 1 192.168.100.1'
-check "BR-SRV reachable (192.168.0.2)"              'ping -c 2 -W 1 192.168.0.2'
+check "$LAN_ROLE reachable ($LAN_PEER)"            "ping -c 2 -W 1 $LAN_PEER"
 check "NAT MASQUERADE configured"                   'iptables -t nat -C POSTROUTING -o enp7s1 -j MASQUERADE'
 check "SSH DNAT (2127) configured"                  'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 2127 -j DNAT --to-destination 192.168.0.2:2127'
 check "testapp DNAT (8080) configured"              'iptables -t nat -C PREROUTING -i enp7s1 -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.2:8080'
@@ -254,15 +289,28 @@ next_step() {
     echo -e "${CYAN}============================================================${NC}"
     echo -e "${CYAN} NEXT STEP${NC}"
     echo -e "${CYAN}============================================================${NC}"
-    echo -e " Run next : ${YELLOW}br-srv.sh${NC} on the branch server host"
-    echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN), gateway is this BR-RTR"
-    echo
-    echo -e " Before running it, set a static address on that host (enp7s1):"
-    echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
-    echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
-    echo -e "   echo 'default via 192.168.0.1' > /etc/net/ifaces/enp7s1/ipv4route"
+    if [ "$BR_FW" = "yes" ]; then
+        echo -e " Run next : ${YELLOW}br-fw.sh${NC} on the branch firewall host"
+        echo -e " Segment  : 192.168.1.0/30 (link BR-RTR - BR-FW)"
+        echo
+        echo -e " Before running it, set a static address on that host (enp7s1):"
+        echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+        echo -e "   echo 192.168.1.2/30 > /etc/net/ifaces/enp7s1/ipv4address"
+        echo -e "   echo 'default via 192.168.1.1' > /etc/net/ifaces/enp7s1/ipv4route"
+        OTHER="no"
+    else
+        echo -e " Run next : ${YELLOW}br-srv.sh${NC} on the branch server host"
+        echo -e " Segment  : 192.168.0.0/28 (flat, no VLAN), gateway is this BR-RTR"
+        echo
+        echo -e " Before running it, set a static address on that host (enp7s1):"
+        echo -e "   sed -i 's/^BOOTPROTO=.*/BOOTPROTO=static/' /etc/net/ifaces/enp7s1/options"
+        echo -e "   echo 192.168.0.2/28 > /etc/net/ifaces/enp7s1/ipv4address"
+        echo -e "   echo 'default via 192.168.0.1' > /etc/net/ifaces/enp7s1/ipv4route"
+        OTHER="yes"
+    fi
     echo -e "   echo 'nameserver 77.88.8.8' > /etc/net/ifaces/enp7s1/resolv.conf"
     echo -e "   systemctl restart network"
+    echo -e " Wrong BR-FW answer? Rerun this router: ${YELLOW}BR_FW=$OTHER ./retry${NC}"
     echo -e "${CYAN}============================================================${NC}"
     echo
 }

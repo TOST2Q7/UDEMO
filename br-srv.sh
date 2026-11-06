@@ -188,8 +188,17 @@ ssh_try() {
         echo "SSH FAILED: $1" >&2
     fi
 }
+# BR-RTR is 192.168.0.1 when this host hangs on it directly, 192.168.1.1 when
+# BR-FW sits in between (192.168.0.1 is then BR-FW): only then does the
+# BR-RTR - BR-FW link answer. inventory2.yml ships the address without BR-FW
+BR_RTR_IP="192.168.0.1"
+ping -c 1 -W 1 192.168.1.1 &>/dev/null && BR_RTR_IP="192.168.1.1"
+echo "BR-RTR is $BR_RTR_IP"
+sed -i "/^ *br-rtr:/,/ansible_host:/ s/ansible_host: .*/ansible_host: $BR_RTR_IP/" /etc/ansible/inventory.yml
+
 ssh_try admin@192.168.100.1
-ssh_try admin@192.168.0.1
+ssh_try "admin@$BR_RTR_IP"
+[ "$BR_RTR_IP" = "192.168.1.1" ] && ssh_try admin@192.168.0.1   # BR-FW
 ssh_try userssh@192.168.100.2
 ssh_try userssh@192.168.0.2
 

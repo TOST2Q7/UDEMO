@@ -13,6 +13,11 @@ RAW_URL="https://raw.githubusercontent.com/TOST2Q7/UDEMO/refs/heads/checks/$NAME
 # Proxmox tags it and the address sits on enp7s1, or the VM tags it on enp7s1.100
 IFACE="enp7s1"
 [ -d /etc/net/ifaces/enp7s1.100 ] && IFACE="enp7s1.100"
+
+# Is there a firewall BR-FW between BR-RTR and BR-SRV (br-rtr.sh asks the
+# same)? It decides the br-rtr / br-fw DNS records. Empty = ask (Enter = yes);
+# "BR_FW=no ./hq-srv.sh" skips the question
+BR_FW="${BR_FW:-}"
 # ===========================================================
 
 # ===========================================================
@@ -65,12 +70,43 @@ elif ! getent hosts raw.githubusercontent.com &>/dev/null; then
 fi
 echo -e "\033[0;32m[OK] Gateway, internet and DNS work\033[0m"
 
+choose_br_fw() {
+    local ans
+    case "$BR_FW" in yes|no) return ;; esac
+    BR_FW="yes"
+    { : </dev/tty; } 2>/dev/null || return
+    echo
+    echo " Is there a firewall BR-FW between BR-RTR and BR-SRV? (for the DNS records)"
+    echo "   1) Yes: br-fw = 192.168.0.1, br-rtr = 192.168.1.1 (default)"
+    echo "   2) No:  br-rtr = 192.168.0.1, no br-fw record"
+    while true; do
+        read -r -p " Choice [1]: " ans </dev/tty
+        case "$ans" in
+            ""|1) BR_FW="yes"; return ;;
+            2)    BR_FW="no";  return ;;
+        esac
+    done
+}
+choose_br_fw
+if [ "$BR_FW" = "yes" ]; then BR_RTR_IP="192.168.1.1"; else BR_RTR_IP="192.168.0.1"; fi
+
 hostnamectl set-hostname hq-srv.tkhis.pro
 
 # Install wget
 apt-get update && apt-get install -y wget
 # Configure DNS
 wget -O "$DIR/dnsmasq.conf" "$(dirname "$RAW_URL")/dnsmasq.conf"
+# The repo file has the branch records without BR-FW. With BR-FW the LAN
+# gateway 192.168.0.1 is br-fw and br-rtr is 192.168.1.1, its end of the
+# link to BR-FW. The patterns leave the file's CRLF line endings alone
+if [ "$BR_FW" = "yes" ]; then
+    sed -i -e 's#^address=/br-rtr\.tkhis\.pro/192\.168\.0\.1#address=/br-rtr.tkhis.pro/192.168.1.1#' \
+           -e 's#^ptr-record=1\.0\.168\.192\.in-addr\.arpa,br-rtr\.tkhis\.pro#ptr-record=1.1.168.192.in-addr.arpa,br-rtr.tkhis.pro#' \
+           "$DIR/dnsmasq.conf"
+    grep -q '^address=/br-fw\.tkhis\.pro/' "$DIR/dnsmasq.conf" || printf '%s\r\n' \
+        'address=/br-fw.tkhis.pro/192.168.0.1' \
+        'ptr-record=1.0.168.192.in-addr.arpa,br-fw.tkhis.pro' >> "$DIR/dnsmasq.conf"
+fi
 apt-get install -y dnsmasq
 systemctl enable --now dnsmasq
 rm -rf /etc/dnsmasq.conf
@@ -223,6 +259,9 @@ check "Internet names resolve via dnsmasq"          'getent hosts raw.githubuser
 check "dnsmasq is running"                          'systemctl is-active --quiet dnsmasq'
 check "dnsmasq enabled at boot"                     'systemctl is-enabled --quiet dnsmasq'
 check "/etc/dnsmasq.conf copied"                    '[ -s /etc/dnsmasq.conf ]'
+check "DNS: br-rtr.tkhis.pro -> $BR_RTR_IP (BR-FW: $BR_FW)" "getent hosts br-rtr.tkhis.pro | grep -q '^$BR_RTR_IP '"
+[ "$BR_FW" = "yes" ] && \
+check "DNS: br-fw.tkhis.pro -> 192.168.0.1"         "getent hosts br-fw.tkhis.pro | grep -q '^192.168.0.1 '"
 check "User userssh created (UID 2027)"             '[ "$(id -u userssh)" = "2027" ]'
 check "userssh is in group wheel"                   'id -nG userssh | grep -qw wheel'
 check "userssh added to sudoers"                    'grep -q "userssh ALL=(ALL) NOPASSWD: ALL" /etc/sudoers'

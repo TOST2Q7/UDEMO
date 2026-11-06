@@ -1,7 +1,8 @@
 # UDEMO — ветка `checks`
 
 Набор bash-скриптов, которые разворачивают учебный сетевой стенд компании
-`tkhis.pro` на ALT Linux: провайдер, два офиса с маршрутизаторами,
+`tkhis.pro` на ALT Linux: провайдер, два офиса с маршрутизаторами
+(в филиале — по выбору с межсетевым экраном BR-FW),
 GRE + OSPF между ними, VLAN, DHCP, DNS, NTP, RAID + NFS, SSH, Ansible,
 домен Samba AD, сайт на LAMP и приложение в Docker за обратным прокси nginx,
 HTTPS на ГОСТ-сертификатах. Каждый скрипт после настройки сам
@@ -18,7 +19,7 @@ HTTPS на ГОСТ-сертификатах. Каждый скрипт посл
 | [01-script-skeleton.md](docs/01-script-skeleton.md) | общий каркас всех скриптов: переменные, `check()`, `retry`/`delete`, самоудаление, NEXT STEP, `exec bash` |
 | [02-isp.md](docs/02-isp.md) | `isp.sh` — провайдер: часовой пояс, сервер времени, адреса, NAT, SSH |
 | [03-hq-rtr.md](docs/03-hq-rtr.md) | `hq-rtr.sh`, `hq-rtr-2.sh` — VLAN, DHCP, GRE, OSPF, NAT и проброс 8080, `admin` |
-| [04-br-rtr.md](docs/04-br-rtr.md) | `br-rtr.sh` — маршрутизатор филиала, проброс SSH и 8080, LAN филиала |
+| [04-br-rtr.md](docs/04-br-rtr.md) | `br-rtr.sh` — маршрутизатор филиала, проброс SSH и 8080, LAN филиала или линк до BR-FW |
 | [05-hq-srv.md](docs/05-hq-srv.md) | `hq-srv.sh`, `dnsmasq.conf` — DNS, RAID 5, NFS, `userssh` |
 | [06-hq-cli.md](docs/06-hq-cli.md) | `hq-cli.sh` — клиент: браузер, NFS, SSH |
 | [07-br-srv.md](docs/07-br-srv.md) | `br-srv.sh`, `inventory2.yml`, `get_hostname.yml` — Ansible |
@@ -26,12 +27,13 @@ HTTPS на ГОСТ-сертификатах. Каждый скрипт посл
 | [09-web-services.md](docs/09-web-services.md) | `web.sh`, `docker.sh`, `proxy.sh` — сайт на LAMP, testapp в Docker, обратный прокси nginx |
 | [10-gost.md](docs/10-gost.md) | `gost.sh`, `gost-isp.sh`, `gost-hqcli.sh` — УЦ и HTTPS на ГОСТ |
 | [11-notes.md](docs/11-notes.md) | особенности, допущения, внешние зависимости, подводные камни |
+| [12-br-fw.md](docs/12-br-fw.md) | `br-fw.sh` — межсетевой экран филиала (если он есть на стенде): OSPF, правила iptables, `admin`; как скрипты выбирают вариант с BR-FW и без |
 | [13-extra.md](docs/13-extra.md) | `samba-users.sh`, `fail2ban.sh`, `cups.sh`, `atop.sh` — импорт пользователей, защита SSH, печать, мониторинг |
 
 ## Порядок запуска (кратко)
 
 ```
-ISP → HQ-RTR, BR-RTR → HQ-SRV → HQ-RTR (hq-rtr-2.sh) → HQ-CLI
+ISP → HQ-RTR, BR-RTR → [BR-FW] → HQ-SRV → HQ-RTR (hq-rtr-2.sh) → HQ-CLI
     → BR-SRV (br-srv.sh, затем samba.sh, samba-users.sh)
     → HQ-SRV (web.sh), BR-SRV (docker.sh) → ISP (proxy.sh)
     → HQ-SRV (gost.sh) → ISP (gost-isp.sh) → HQ-CLI (gost-hqcli.sh)
